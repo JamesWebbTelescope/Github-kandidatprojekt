@@ -396,7 +396,11 @@ class Video(Thread):
             except:
                 print("Couldn't show original image")
                 img = 0
-            img_points = camera_video.floodFill(img, r)
+            img_points = self.floodFill(img, r)
+            if takepicFlag == 1:
+                ret, second_img = self.cap.read()
+                img_points = self.floodfill(img, r)
+                takepicFlag = 0
             cv.waitKey(1)
             if terminateFlag == 1:
                 break
