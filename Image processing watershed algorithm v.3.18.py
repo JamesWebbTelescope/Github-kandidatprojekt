@@ -130,7 +130,7 @@ class Robot_TCP_comm(Thread):
         print("Start")
         print(img_points)
         while robotControlFlag == 0:
-            if robotControlFlag == 1:
+            if robotControlFlag == 1 or terminateFlag == 1:
                 break
             
         while True:
