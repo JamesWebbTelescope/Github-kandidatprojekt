@@ -14,10 +14,7 @@ import time
 import pyvisa
 from threading import Thread
 import csv
-import tensorflow as tf
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSlot
 
 global img2
 global img_text
@@ -33,8 +30,6 @@ global text
 global test_points
 global FSR_voltage
 global distance
-global cameraControlFlag
-global robotControlFlag
 test_points = [[0,0], [0,0], [0,0], [0,0], [0,0]]
 box_w, box_h, img_rect, circles, img_text, box_x, box_y = [0,0,0,0,0,0,0]
 voltages = str(0)
@@ -46,10 +41,10 @@ img_points = []
 circles_x = 0
 circles_y = 0
 takePicFlag = 0
-stopFlag = 0
 x_mm, y_mm = [0,0]
 cameraControlFlag = 0
 robotControlFlag = 0
+terminateFlag = 0
 
 class Interface(Thread):
     def __init__(self):
@@ -71,6 +66,21 @@ class Interface(Thread):
         button2.setText("Stop camera")
         button2.move(64,64)
         button2.clicked.connect(self.button2_clicked)
+        
+        button3 = QPushButton(widget)
+        button3.setText("Start robot")
+        button3.move(64,96)
+        button3.clicked.connect(self.button3_clicked)
+        
+        button4 = QPushButton(widget)
+        button4.setText("Stop robot")
+        button4.move(64,128)
+        button4.clicked.connect(self.button4_clicked)
+        
+        button5 = QPushButton(widget)
+        button5.setText("Terminate program")
+        button5.move(64,160)
+        button5.clicked.connect(self.button5_clicked)
 
         widget.setGeometry(50,50,320,200)
         widget.setWindowTitle("ESD Test control")
@@ -80,20 +90,35 @@ class Interface(Thread):
 
     def button1_clicked(self):
         global cameraControlFlag
-        print("Button 1 clicked")
+        print("Camera started")
         cameraControlFlag = 1
 
     def button2_clicked(self):
         global cameraControlFlag
-        print("Button 2 clicked") 
+        print("Camera stopped") 
         cameraControlFlag = 0
+        
+    def button3_clicked(self):
+        global robotControlFlag
+        print("Robot started") 
+        robotControlFlag = 1
+        
+    def button4_clicked(self):
+        global robotControlFlag
+        print("Robot stopped") 
+        robotControlFlag = 0
+        
+    def button5_clicked(self):
+        global terminateFlag
+        print("Program terminated") 
+        terminateFlag = 1
 
 class Robot_TCP_comm(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_origin_fixed = (640,480)
+        self.robot_origin_fixed = (249,270)
         self.camera_distance = 864.0
         self.camera_distance_2 = 100.0
         self.sensor_width = 4.54
@@ -104,11 +129,17 @@ class Robot_TCP_comm(Thread):
     def run(self):
         print("Start")
         print(img_points)
+        while robotControlFlag == 0:
+            if robotControlFlag == 1:
+                break
+            
         while True:
             if len(img_points) > 0:
                 #print(img_points[0][0])
                 #print(type(img_points[0][0]))
                 for i in range(len(img_points)):
+                    if robotControlFlag == 0:
+                        break
                     print("Start")
                     button_state = self.checkButton()
                     button_state_decoded = button_state.decode()
@@ -125,9 +156,9 @@ class Robot_TCP_comm(Thread):
                         print(box_x, box_y)
                         x_mm, y_mm = self.convertPixeltoMM(x_dist_pix, y_dist_pix)
                         self.moveRobot(x_mm, y_mm)'''
-                    if stopFlag == 1:
+                    if terminateFlag == 1:
                         break
-                if stopFlag == 1:
+                if terminateFlag == 1:
                     break
         self.close()
         
@@ -198,7 +229,7 @@ class Robot_TCP_comm(Thread):
         #print("Moving to probe")
         time.sleep(0.1)
         turns = 0
-        while (voltages < str(1) and distance > 20):
+        while (voltages < str(1) and distance > 20 and robotControlFlag == 1):
             self.recv.sendall(b"zShift = -1\n")
             #print("Moving down")
             time.sleep(0.1)
@@ -216,7 +247,7 @@ class Robot_TCP_comm(Thread):
                 self.recv.sendall(b"takepic = 1\n")
                 time.sleep(1)
                 break
-            if stopFlag == 1:
+            if terminateFlag == 1:
                 self.recv.sendall(b"zShift = 0\n")
                 #print("Robot stopped")
                 time.sleep(1)
@@ -330,19 +361,19 @@ class Video(Thread):
         self.sensor_height = 3.4565
         self.focal_length = 3.916
         self.cap = 0
-        #self.loadIGBTClassifier()
         return None
     def run(self):
         global box_x
         global box_y
-        global stopFlag
+        global terminateFlag
         global img_points
         
         self.cap, square_flag = self.startVideo("Run")
         self.B,self.G,self.R = (100, 100, 200)
         
         ret, img = self.cap.read()
-        
+        cv.waitKey(1)
+        print(img.shape)
         
         while cameraControlFlag == 0:
             if cameraControlFlag == 1:
@@ -351,22 +382,23 @@ class Video(Thread):
         r = cv.selectROI("Select region of interest", img, fromCenter)
         print(r)
         
+        cv.imshow("Original image", img)
+        
         while True:
             try:
-                cv.imshow("Original image", img)
-                cv.imwrite("Original image.png", img)
-                img_show = self.cap.read()
+                #cv.imwrite("Original image.png", img)
+                ret, img_show = self.cap.read()
                 cv.imshow("Live camera feed", img_show)
                 #cv.imshow("Background image", img_bg)
                 #cv.imwrite("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/02 - Code/01 - Samples/Original image", img)
-                h, w, c = img.shape
+                #h, w, c = img.shape
                # cv.imshow("Cropped image", img_cropped)
             except:
                 print("Couldn't show original image")
                 img = 0
-            img_points = camera_video.detectBoxes(img)
-            if cameraControlFlag == 0:
-                stopFlag = 1
+            img_points = camera_video.floodFill(img, r)
+            cv.waitKey(1)
+            if terminateFlag == 1:
                 break
         self.cap.release()
         cv.destroyAllWindows()
@@ -376,8 +408,8 @@ class Video(Thread):
         if run == "Run":
             try:
                cap = cv.VideoCapture(0)
-               cap.set(cv.CAP_PROP_AUTOFOCUS, 1.0)
-               cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
+               #cap.set(cv.CAP_PROP_AUTOFOCUS, 2.0)
+               #cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
             except:
                 print("Couldn't access camera")
         elif run == "Test":
@@ -387,10 +419,11 @@ class Video(Thread):
         return cap, square_flag
     
     def floodFill(self, img, r):
+        global img_points
         orig_img = img
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         image_cropped = gray[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
-        _, threshold = cv.threshold(image_cropped, 230, 255, cv.THRESH_BINARY)
+        _, threshold = cv.threshold(image_cropped, 200, 255, cv.THRESH_BINARY)
         
         cv.imwrite("Threshold floodfill.png", threshold)
         
@@ -406,6 +439,7 @@ class Video(Thread):
         contours, _ = cv.findContours(threshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         largest_contours = sorted(contours, key = cv.contourArea, reverse = True)[0:5]
         img_points = []
+        img_rect = img
         for c in range(len(largest_contours)):
             #print("Drawing boxes")
             rect = cv.minAreaRect(largest_contours[c])
@@ -523,46 +557,6 @@ class Video(Thread):
                     cv.imshow("Second detected rectangles", img_rect)
                     cv.imwrite("Second detected rectangles.png", img_rect)
         return img_points
-    
-    def loadIGBTClassifier(self):
-        print("Setup model")
-        #self.checkpoint_dir = 'C:/Users/Viktor From/Downloads/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8/checkpoint/IGBT_detector_new-2'
-        #self.checkpoint_dir = "C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI/sandbox/Viktor From/IGBT_classifier"
-        self.detection_model = tf.keras.models.load_model("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/02 - Code/01 - Samples/01 - Machine learning/IGBT_classifier")
-        #self.detection_model = hub.load("https://tfhub.dev/tensorflow/ssd_mobilenet_v2/2")
-        #self.detection_model = hub.load("https://tfhub.dev/tensorflow/retinanet/resnet50_v1_fpn_640x640/1")
-        #self.detection_layer = hub.KerasLayer(self.detection_model, trainable=False)
-        #self.detection_model = tf.keras.Sequential(self.detection_layer)
-        #ckpt = tf.compat.v2.train.Checkpoint(model=self.detection_model)
-        #ckpt.restore(self.checkpoint_dir).expect_partial()
-        #restore = tf.train.Checkpoint(self.detection_model)
-        #status = restore.restore(self.checkpoint_dir)
-        #status.expect_partial()
-        #self.detection_model.load_weights(self.checkpoint_dir)
-        print("Compile")
-        #input_tensor = tf.convert_to_tensor(img)
-        #self.detection_model.build((1, None, None, 3))
-        #self.detection_model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), metrics=['acc'])
-        self.detection_model.summary()
-        return 0
-    
-    def predictIGBT(self, img):
-        #predictions = self.model.predict(img)
-        #print(predictions)
-        print("Detecting")
-        data_augmentation = tf.keras.Sequential([
-          tf.keras.layers.Resizing(160, 160),
-        ])
-        augmented_img = data_augmentation(tf.expand_dims(img, 0))
-        #img_array = tf.keras.utils.img_to_array(augmented_img)
-        input_tensor = tf.convert_to_tensor(augmented_img, dtype=tf.float32)
-        #input_tensor = input_tensor[tf.newaxis, ...]
-        predictions = self.detection_model.predict(input_tensor)
-        
-        print(predictions)
-        print("Predictions done")
-        #print(type(predictions))
-        return predictions
 
 
 class Arduino(Thread):
@@ -604,7 +598,7 @@ class Arduino(Thread):
             
           #  print(self.text)
             text = self.text
-            if stopFlag == 1:
+            if terminateFlag == 1:
                 break
         self.close()
     
@@ -671,7 +665,7 @@ class Oscilloscope(Thread):
     # write a row to the csv file
                      writer.writerow(data)
                      f.close()
-            if stopFlag == 1:
+            if terminateFlag == 1:
                 break
         self.close()
     
