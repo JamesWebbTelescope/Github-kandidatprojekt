@@ -12,7 +12,7 @@ import socket
 import sys
 import time
 import pyvisa
-from threading import Thread
+from threading import Thread, Event
 import csv
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 
@@ -42,9 +42,10 @@ circles_x = 0
 circles_y = 0
 takePicFlag = 0
 x_mm, y_mm = [0,0]
-cameraControlFlag = 0
-robotControlFlag = 0
+camera_event = Event()
+robot_event = Event()
 terminateFlag = 0
+robotControlFlag = 0
 
 class Interface(Thread):
     def __init__(self):
@@ -89,24 +90,24 @@ class Interface(Thread):
 
 
     def button1_clicked(self):
-        global cameraControlFlag
+        global camera_event
         print("Camera started")
-        cameraControlFlag = 1
+        camera_event.set()
 
     def button2_clicked(self):
-        global cameraControlFlag
+        global camera_event
         print("Camera stopped") 
-        cameraControlFlag = 0
+        camera_event.clear()
         
     def button3_clicked(self):
-        global robotControlFlag
+        global robot_event
         print("Robot started") 
-        robotControlFlag = 1
+        robot_event.set()
         
     def button4_clicked(self):
-        global robotControlFlag
+        global robot_event
         print("Robot stopped") 
-        robotControlFlag = 0
+        robot_event.clear()
         
     def button5_clicked(self):
         global terminateFlag
@@ -129,11 +130,10 @@ class Robot_TCP_comm(Thread):
     def run(self):
         print("Start")
         print(img_points)
-        while robotControlFlag == 0:
-            if robotControlFlag == 1 or terminateFlag == 1:
-                break
+        robot_event.wait()
             
         while True:
+            robot_event.wait()
             if len(img_points) > 0:
                 #print(img_points[0][0])
                 #print(type(img_points[0][0]))
@@ -230,6 +230,7 @@ class Robot_TCP_comm(Thread):
         time.sleep(0.1)
         turns = 0
         while (voltages < str(1) and distance > 20 and robotControlFlag == 1):
+            robot_event.wait()
             self.recv.sendall(b"zShift = -1\n")
             #print("Moving down")
             time.sleep(0.1)
@@ -366,7 +367,10 @@ class Video(Thread):
         global box_x
         global box_y
         global terminateFlag
+        global takePicFlag
         global img_points
+        
+        camera_event.wait()
         
         self.cap, square_flag = self.startVideo("Run")
         self.B,self.G,self.R = (100, 100, 200)
@@ -375,9 +379,6 @@ class Video(Thread):
         cv.waitKey(1)
         print(img.shape)
         
-        while cameraControlFlag == 0:
-            if cameraControlFlag == 1:
-                break
         fromCenter = False
         r = cv.selectROI("Select region of interest", img, fromCenter)
         print(r)
@@ -385,6 +386,7 @@ class Video(Thread):
         cv.imshow("Original image", img)
         
         while True:
+            camera_event.wait()
             try:
                 #cv.imwrite("Original image.png", img)
                 ret, img_show = self.cap.read()
@@ -397,10 +399,10 @@ class Video(Thread):
                 print("Couldn't show original image")
                 img = 0
             img_points = self.floodFill(img, r)
-            if takepicFlag == 1:
+            if takePicFlag == 1:
                 ret, second_img = self.cap.read()
                 img_points = self.floodfill(img, r)
-                takepicFlag = 0
+                takePicFlag = 0
             cv.waitKey(1)
             if terminateFlag == 1:
                 break
