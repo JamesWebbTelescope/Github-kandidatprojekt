@@ -45,7 +45,6 @@ x_mm, y_mm = [0,0]
 camera_event = Event()
 robot_event = Event()
 terminateFlag = 0
-robotControlFlag = 0
 
 class Interface(Thread):
     def __init__(self):
@@ -135,11 +134,9 @@ class Robot_TCP_comm(Thread):
         while True:
             robot_event.wait()
             if len(img_points) > 0:
-                #print(img_points[0][0])
+                print(img_points[0][0])
                 #print(type(img_points[0][0]))
                 for i in range(len(img_points)):
-                    if robotControlFlag == 0:
-                        break
                     print("Start")
                     button_state = self.checkButton()
                     button_state_decoded = button_state.decode()
@@ -229,8 +226,7 @@ class Robot_TCP_comm(Thread):
         #print("Moving to probe")
         time.sleep(0.1)
         turns = 0
-        while (voltages < str(1) and distance > 20 and robotControlFlag == 1):
-            robot_event.wait()
+        while (voltages < str(1) and distance > 20):
             self.recv.sendall(b"zShift = -1\n")
             #print("Moving down")
             time.sleep(0.1)
@@ -404,6 +400,7 @@ class Video(Thread):
                 img_points = self.floodfill(img, r)
                 takePicFlag = 0
             cv.waitKey(1)
+            print(img_points)
             if terminateFlag == 1:
                 break
         self.cap.release()
@@ -711,4 +708,3 @@ camera_video.join()
 arduino_control.join()
 oscilloscope.join()
 interface.join()
-
