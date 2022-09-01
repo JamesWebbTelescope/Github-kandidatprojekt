@@ -124,7 +124,7 @@ class Robot_TCP_comm(Thread):
         Thread.__init__(self)
         self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_origin_fixed = (240, 320)
+        self.robot_origin_fixed = (360, 640)
         self.camera_distance = 864.0
         self.camera_distance_2 = 100.0
         self.sensor_width = 4.54
@@ -210,6 +210,9 @@ class Robot_TCP_comm(Thread):
     def moveRobot(self, x_dist_mm, y_dist_mm):
         global voltage, FSR_voltage, distance, takePicFlag
         time.sleep(1)
+        self.recv.sendall(b"zShift = -200\n")
+        time.sleep(1)
+        self.recv.sendall(b"zShift = 0\n")
         send_x = "xShift = " + str(x_dist_mm) + "\n"
         send_y = "yShift = " + str(y_dist_mm) + "\n"
         send_x_encoded = send_x.encode('utf-8')
@@ -231,18 +234,25 @@ class Robot_TCP_comm(Thread):
         self.recv.sendall(b"yShift = 135\n")
         #print("Moving to probe")
         time.sleep(0.1)
-        turns = 0
+        turns = 200
         while (voltages < str(1) and distance > 20):
             robot_event.wait()
             self.recv.sendall(b"zShift = -1\n")
             #print("Moving down")
             time.sleep(0.1)
             turns = turns + 1
-            #print(turns)
-            if turns > 600:
+            print(turns)
+            if turns == 600:
                 takePicFlag = 1
                 self.recv.sendall(b"zShift = 0\n")
                 #print("Turns exceeded 600!")
+            if turns > 900:
+                self.recv.sendall(b"zShift = 0\n")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n")
+                time.sleep(1)
+                print("Robot stopeed to avoid crash!")
+                break
                 time.sleep(0.1)
             if (voltages > str(1)):
                 self.recv.sendall(b"zShift = 0\n")
@@ -296,8 +306,9 @@ class Robot_TCP_comm(Thread):
     def convertPixeltoMM(self,x_dist_pix, y_dist_pix):
         
         x_dist_mm = float((self.camera_distance_2*x_dist_pix*self.sensor_width)/(self.focal_length*1280.0));
-        y_dist_mm = float((self.camera_distance_2*y_dist_pix*self.sensor_height)/(self.focal_length*960.0));
-    
+        y_dist_mm = float((self.camera_distance_2*y_dist_pix*self.sensor_height)/(self.focal_length*720.0));
+        return x_dist_mm, y_dist_mm
+        
         '''
     
     Returns x and y in mm
@@ -404,7 +415,7 @@ class Video(Thread):
             if takePicFlag == 1:
                 ret, second_img = self.cap.read()
                 cv.imshow("Close up", second_img)
-                img_points = self.floodFill(img, r)
+                img_points = self.floodFill(second_img, r)
                 takePicFlag = 0
             cv.waitKey(1)
             #print(img_points)
@@ -417,8 +428,10 @@ class Video(Thread):
     def startVideo(self, run):
         if run == "Run":
             try:
-               cap = cv.VideoCapture(0)
+               cap = cv.VideoCapture(0, cv.CAP_DSHOW)
                cap.set(cv.CAP_PROP_AUTOFOCUS, 0.32)
+               cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+               cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
                #cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
                time.sleep(1)
             except:
@@ -450,7 +463,6 @@ class Video(Thread):
         contours, _ = cv.findContours(threshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
         largest_contours = sorted(contours, key = cv.contourArea, reverse = True)[0:5]
         img_points = []
-        img_rect = img
         for c in range(len(largest_contours)):
             #print("Drawing boxes")
             rect = cv.minAreaRect(largest_contours[c])
