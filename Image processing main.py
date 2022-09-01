@@ -110,15 +110,21 @@ class Interface(Thread):
         
     def button5_clicked(self):
         global terminateFlag
-        print("Program terminated") 
+        global robot_event
+        global camera_event
+        robot_event.set()
+        camera_event.set()
         terminateFlag = 1
+        robot_event.clear()
+        camera_event.clear()
+        print("Program terminated") 
 
 class Robot_TCP_comm(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_origin_fixed = (249,270)
+        self.robot_origin_fixed = (240, 320)
         self.camera_distance = 864.0
         self.camera_distance_2 = 100.0
         self.sensor_width = 4.54
@@ -138,8 +144,8 @@ class Robot_TCP_comm(Thread):
                 #print(type(img_points[0][0]))
                 for i in range(len(img_points)):
                     print("Start")
-                    button_state = self.checkButton()
-                    button_state_decoded = button_state.decode()
+                    #button_state = self.checkButton()
+                    #button_state_decoded = button_state.decode()
                  #   print(img_points[i][0])
                   #  print(type(img_points[i][0]))
                     x_dist_pix, y_dist_pix = self.findDistance(img_points[i][0]+(img_points[i][2]/4), img_points[i][1]+(img_points[i][3]/4))
@@ -185,9 +191,9 @@ class Robot_TCP_comm(Thread):
                received = self.send.recv(1024)
                print("Connection made")
                print(received)
-               #send.sendall(b"zShift = -40\n")
                self.recv.sendall(b"takepic = 1\n")
                time.sleep(1)
+               
             except socket.error as e:
                 print(e)
             except:
@@ -227,6 +233,7 @@ class Robot_TCP_comm(Thread):
         time.sleep(0.1)
         turns = 0
         while (voltages < str(1) and distance > 20):
+            robot_event.wait()
             self.recv.sendall(b"zShift = -1\n")
             #print("Moving down")
             time.sleep(0.1)
@@ -378,7 +385,7 @@ class Video(Thread):
         fromCenter = False
         r = cv.selectROI("Select region of interest", img, fromCenter)
         print(r)
-        
+        img_points = self.floodFill(img, r)
         cv.imshow("Original image", img)
         
         while True:
@@ -394,13 +401,13 @@ class Video(Thread):
             except:
                 print("Couldn't show original image")
                 img = 0
-            img_points = self.floodFill(img, r)
             if takePicFlag == 1:
                 ret, second_img = self.cap.read()
-                img_points = self.floodfill(img, r)
+                cv.imshow("Close up", second_img)
+                img_points = self.floodFill(img, r)
                 takePicFlag = 0
             cv.waitKey(1)
-            print(img_points)
+            #print(img_points)
             if terminateFlag == 1:
                 break
         self.cap.release()
@@ -411,8 +418,9 @@ class Video(Thread):
         if run == "Run":
             try:
                cap = cv.VideoCapture(0)
-               #cap.set(cv.CAP_PROP_AUTOFOCUS, 2.0)
+               cap.set(cv.CAP_PROP_AUTOFOCUS, 0.32)
                #cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
+               time.sleep(1)
             except:
                 print("Couldn't access camera")
         elif run == "Test":
