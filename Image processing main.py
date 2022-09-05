@@ -25,13 +25,15 @@ global rect2
 global box2
 global img_rect2
 global img_points
-global img_points2
+global img_points_corrected
 global text
 global test_points
 global FSR_voltage
 global distance_measured
 img_width = 640
 img_height = 480
+img_margin = 200
+crop_width = 240
 test_points = [[0,0], [0,0], [0,0], [0,0], [0,0]]
 box_w, box_h, img_rect, circles, img_text, box_x, box_y = [0,0,0,0,0,0,0]
 voltages = str(0)
@@ -40,6 +42,7 @@ button_state_decoded = ''
 text = 'Text'
 cleandata = 'Nothing'
 img_points = []
+img_points_corrected = []
 circles_x = 0
 circles_y = 0
 takePicFlag = 0
@@ -142,7 +145,7 @@ class Robot_TCP_comm(Thread):
         while True:
             robot_event.wait()
             if len(img_points) > 0:
-                print(img_points[0][0])
+                #print(img_points[0][0])
                 #print(type(img_points[0][0]))
                 for i in range(len(img_points)):
                     print("Start")
@@ -150,7 +153,7 @@ class Robot_TCP_comm(Thread):
                     #button_state_decoded = button_state.decode()
                  #   print(img_points[i][0])
                   #  print(type(img_points[i][0]))
-                    x_dist_pix, y_dist_pix = self.findDistance(img_points[i][0]+(img_points[i][2]/4), img_points[i][1]+(img_points[i][3]/4))
+                    x_dist_pix, y_dist_pix = self.findDistance(img_points[i][0]+(img_points[i][2]/3), img_points[i][1]+(img_points[i][3]/3))
                     x_mm, y_mm = self.convertPixeltoMM(x_dist_pix, y_dist_pix)
                     print(x_mm, y_mm)
                    # print("Distance to point:")
@@ -227,16 +230,16 @@ class Robot_TCP_comm(Thread):
         #self.recv.sendall(np.byte(x_dist_mm))
         #self.recv.sendall(b"\n")
         self.recv.sendall(send_x_encoded)
-        time.sleep(0.1)
+        time.sleep(1)
         #self.recv.sendall(b"yShift = ")
         #self.recv.sendall(np.byte(y_dist_mm))
         #self.recv.sendall(b"\n")
         self.recv.sendall(send_y_encoded)
-        time.sleep(0.1)
+        time.sleep(1)
         #print("Found the test point")
-        for i in range(65):
-            self.recv.sendall(b"yShift = 2\n")
-            time.sleep(0.1)
+        '''for i in range(65):
+            self.recv.sendall(b"yShift = 1\n")
+            time.sleep(0.1)'''
         turns = 0
         while (voltages < str(1) and distance_measured > 20):
             robot_event.wait()
@@ -244,22 +247,27 @@ class Robot_TCP_comm(Thread):
             #print("Moving down")
             time.sleep(0.1)
             turns = turns + 1
+            #
             #print(turns)
             if turns == 1000:
                 takePicFlag = 1
                 self.recv.sendall(b"zShift = 0\n")
-                x_dist_pix, y_dist_pix = self.findDistance(img_points[0][0]+(img_points[0][2]/4), img_points[0][1]+(img_points[0][3]/4))
+                while len(img_points_corrected) <= 1:
+                    if len(img_points_corrected) > 1:
+                        break
+                print(img_points_corrected[0])
+                x_dist_pix, y_dist_pix = self.findDistance(img_points_corrected[0][0]+(img_points_corrected[0][2]/3), img_points_corrected[0][1]+(img_points_corrected[0][3]/3))
                 x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
                 send_x = "xShift = " + str(x_dist_mm) + "\n"
                 send_y = "yShift = " + str(y_dist_mm) + "\n"
                 send_x_encoded = send_x.encode('utf-8')
                 send_y_encoded = send_y.encode('utf-8')
                 self.recv.sendall(send_x_encoded)
-                time.sleep(0.1)
+                time.sleep(1)
                 self.recv.sendall(send_y_encoded)
-                time.sleep(0.1)
-                #print("Turns exceeded 600!")
-            if turns > 1400:
+                time.sleep(1)
+                #print("Turns exceeded 600!")'''
+            if turns > 1800:
                 self.recv.sendall(b"zShift = 0\n")
                 time.sleep(1)
                 self.recv.sendall(b"takepic = 1\n")
@@ -269,7 +277,7 @@ class Robot_TCP_comm(Thread):
                 time.sleep(0.1)
             if (voltages > str(1)):
                 self.recv.sendall(b"zShift = 0\n")
-                #print("Robot stopped")
+                print("Robot stopped because of voltage detected")
                 time.sleep(1)
                 self.recv.sendall(b"takepic = 1\n")
                 time.sleep(1)
@@ -283,7 +291,8 @@ class Robot_TCP_comm(Thread):
                 break
             if (distance_measured < 20):
                 self.recv.sendall(b"zShift = 0\n")
-                #print("Robot stopped")
+                print("Distance: " + str(distance_measured))
+                print("Robot stopped to avoid collision!")
                 time.sleep(1)
                 self.recv.sendall(b"takepic = 1\n")
                 time.sleep(1)
@@ -403,6 +412,7 @@ class Video(Thread):
         global terminateFlag
         global takePicFlag
         global img_points
+        global img_points_corrected
         
         camera_event.wait()
         
@@ -412,12 +422,12 @@ class Video(Thread):
         ret, img = self.cap.read()
         cv.waitKey(1)
         print(img.shape)
-        
+        orig_img = img
         fromCenter = False
         r = cv.selectROI("Select region of interest", img, fromCenter)
         print(r)
         img_points = self.floodFill(img, r)
-        cv.imshow("Original image", img)
+        cv.imshow("Original image", orig_img)
         print(img.shape)
         
         while True:
@@ -434,10 +444,10 @@ class Video(Thread):
                 print("Couldn't show original image")
                 img = 0
             if takePicFlag == 1:
-                r = [0,0,0,0]
+                r = [img_margin,0,crop_width,img_height]
                 ret, second_img = self.cap.read()
                 cv.imshow("Close up", second_img)
-                img_points = self.floodFill(second_img, r)
+                img_points_corrected = self.floodFill(second_img, r)
                 takePicFlag = 0
             cv.waitKey(1)
             #print(img_points)
@@ -452,7 +462,7 @@ class Video(Thread):
             try:
                cap = cv.VideoCapture(0, cv.CAP_DSHOW)
                cap.set(cv.CAP_PROP_AUTOFOCUS, 0.32)
-               cap.set(cv.CAP_PROP_BRIGHTNESS, 0) 
+               cap.set(cv.CAP_PROP_BRIGHTNESS, 2) 
                cap.set(cv.CAP_PROP_FRAME_WIDTH, img_width)
                cap.set(cv.CAP_PROP_FRAME_HEIGHT, img_height)
                #cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
@@ -466,7 +476,6 @@ class Video(Thread):
         return cap, square_flag
     
     def floodFill(self, img, r):
-        global img_points
         orig_img = img
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         image_cropped = gray[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
@@ -627,8 +636,8 @@ class Arduino(Thread):
             #cleandata = arduino_control.cleanData(data)
             self.cleandata = self.data.decode()
             split = self.cleandata.split()
-          #  print("Received from Arduino")
-          #  print(split)
+            #print("Received from Arduino")
+            #print(split)
             if len(split) > 1:
                 FSR_voltage = float(split[0].replace(',', ''))
            #     print(FSR_voltage)

@@ -29,7 +29,7 @@ global img_points2
 global text
 global test_points
 global FSR_voltage
-global distance_measured
+distance_measured = 0
 img_width = 640
 img_height = 480
 test_points = [[0,0], [0,0], [0,0], [0,0], [0,0]]
@@ -150,7 +150,7 @@ class Robot_TCP_comm(Thread):
                     #button_state_decoded = button_state.decode()
                  #   print(img_points[i][0])
                   #  print(type(img_points[i][0]))
-                    x_dist_pix, y_dist_pix = self.findDistance(img_points[i][0], img_points[i][1])
+                    x_dist_pix, y_dist_pix = self.findDistance((img_points[i][0]), (img_points[i][1]))
                     x_mm, y_mm = self.convertPixeltoMM(x_dist_pix, y_dist_pix)
                     print(x_mm, y_mm)
                    # print("Distance to point:")
@@ -191,7 +191,6 @@ class Robot_TCP_comm(Thread):
                print(received)
                self.recv.sendall(b"takepic = 1\n")
                time.sleep(1)
-               
             except socket.error as e:
                 print(e)
             except:
@@ -207,10 +206,11 @@ class Robot_TCP_comm(Thread):
     
     def moveRobot(self, x_dist_mm, y_dist_mm):
         global voltage, FSR_voltage, distance_measured, takePicFlag
+        '''time.sleep(1)
+        self.recv.sendall(b"zShift = -200\n")
         time.sleep(1)
-        '''self.recv.sendall(b"zShift = -200\n")
-        time.sleep(1)
-        self.recv.sendall(b"zShift = 0\n")'''
+        self.recv.sendall(b"zShift = 0\n")
+        time.sleep(1)'''
         send_x = "xShift = " + str(x_dist_mm) + "\n"
         send_y = "yShift = " + str(y_dist_mm) + "\n"
         send_x_encoded = send_x.encode('utf-8')
@@ -245,17 +245,20 @@ class Robot_TCP_comm(Thread):
             if turns == 600:
                 takePicFlag = 1
                 self.recv.sendall(b"zShift = 0\n")
-                '''x_dist_pix, y_dist_pix = self.findDistance(img_points[0][0]+(img_points[0][2]/4), img_points[0][1]+(img_points[0][3]/4))
+                '''while len(img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
+                    if len(img_points) > 1:
+                        break
+                x_dist_pix, y_dist_pix = self.findDistance(img_points[1][0], img_points[1][1])
                 x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
                 send_x = "xShift = " + str(x_dist_mm) + "\n"
                 send_y = "yShift = " + str(y_dist_mm) + "\n"
+                print(x_mm, y_mm)
                 send_x_encoded = send_x.encode('utf-8')
                 send_y_encoded = send_y.encode('utf-8')
                 self.recv.sendall(send_x_encoded)
-                time.sleep(0.5)
+                time.sleep(0.1)
                 self.recv.sendall(send_y_encoded)
-                time.sleep(0.5)
-                #print("Turns exceeded 600!")'''
+                time.sleep(0.1)'''
             if turns > 1400:
                 self.recv.sendall(b"zShift = 0\n")
                 time.sleep(1)
@@ -413,7 +416,7 @@ class Video(Thread):
         fromCenter = False
         r = cv.selectROI("Select region of interest", img, fromCenter)
         print(r)
-        img_points.append([r[0], r[1], r[2], r[3]])
+        img_points.append([r[0].r[1],r[2],r[3]])
         while True:
             ret, img_show = self.cap.read()
             cv.imshow("Live camera feed", img_show)
