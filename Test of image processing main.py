@@ -127,7 +127,7 @@ class Robot_TCP_comm(Thread):
         self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.robot_origin_fixed = (img_width/2, img_height/2)
-        self.camera_distance = 864.0
+        self.camera_distance = 833.0
         self.camera_distance_2 = 100.0
         self.sensor_width = 4.54
         self.sensor_height = 3.4565
@@ -155,7 +155,7 @@ class Robot_TCP_comm(Thread):
                     print(x_mm, y_mm)
                    # print("Distance to point:")
                     #print(x_mm, y_mm)
-                    self.moveRobot(x_mm, y_mm)
+                    #self.moveRobot(x_mm, y_mm)
                     
                     if terminateFlag == 1:
                         break
@@ -304,8 +304,8 @@ class Robot_TCP_comm(Thread):
     def findDistance(self, x_pix, y_pix):
         #print(type(self.robot_origin_fixed[0]))
         #print(x_pix, y_pix)
-        x_dist_pix = self.robot_origin_fixed[0] - x_pix
-        y_dist_pix = self.robot_origin_fixed[1] - y_pix
+        x_dist_pix = x_pix - self.robot_origin_fixed[0]
+        y_dist_pix = y_pix - self.robot_origin_fixed[1]
         #print("Distance in x: ", x_dist_pix)
         return (x_dist_pix), (y_dist_pix)
     
@@ -409,15 +409,18 @@ class Video(Thread):
         self.cap, square_flag = self.startVideo("Run")
         self.B,self.G,self.R = (100, 100, 200)
         
-        ret, img = self.cap.read()
-        cv.waitKey(1)
-        print(img.shape)
-        
-        fromCenter = False
-        r = cv.selectROI("Select region of interest", img, fromCenter)
-        print(r)
-        img_points.append([r[0].r[1],r[2],r[3]])
         while True:
+            ret, img = self.cap.read()
+            cv.waitKey(1)
+            print(img.shape)
+        
+            fromCenter = False
+            r = cv.selectROI("Select region of interest", img, fromCenter)
+            print("Here rectangle", r)
+            img_points.append([r[0],r[1],r[2],r[3]])
+            rxp, ryp = robot_control.findDistance(r[0], r[1])
+            rx_mm, ry_mm = robot_control.convertPixeltoMM(rxp, ryp)
+            print("Rectangles mm", rx_mm, ry_mm)
             ret, img_show = self.cap.read()
             cv.imshow("Live camera feed", img_show)
             cv.waitKey(1)
