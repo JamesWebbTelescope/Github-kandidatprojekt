@@ -120,48 +120,88 @@ class Interface(Thread):
         robot_event.clear()
         camera_event.clear()
         print("Program terminated") 
-
-class Robot_TCP_comm(Thread):
+        
+class Convert(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.robot_origin_fixed = (img_width/2, img_height/2)
         self.camera_distance = 833.0
         self.camera_distance_2 = 100.0
         self.sensor_width = 4.54
         self.sensor_height = 3.4565
         self.focal_length = 3.916
+    
+    def findDistance(self, x_pix, y_pix):
+        #print(type(self.robot_origin_fixed[0]))
+        #print(x_pix, y_pix)
+        x_dist_pix = x_pix - self.robot_origin_fixed[0]
+        y_dist_pix = y_pix - self.robot_origin_fixed[1]
+        #print("Distance in x: ", x_dist_pix)
+        return (x_dist_pix), (y_dist_pix)
+    
+        '''
+    Returns the distance in x and y between origin and center point of the detected point in pixels.
+    -------
+    int
+        DESCRIPTION.
+        '''
+    
+    def convertPixeltoMM(self,x_dist_pix, y_dist_pix):
+        
+        x_dist_mm = float((self.camera_distance*x_dist_pix*self.sensor_width)/(self.focal_length*img_width));
+        y_dist_mm = float((self.camera_distance*y_dist_pix*self.sensor_height)/(self.focal_length*img_height));
+        return x_dist_mm, y_dist_mm
+    
+    def closeupConvertPixeltoMM(self,x_dist_pix, y_dist_pix):
+        global distance_measured
+        
+        x_dist_mm = float((distance_measured*x_dist_pix*self.sensor_width)/(self.focal_length*img_width));
+        y_dist_mm = float((distance_measured*y_dist_pix*self.sensor_height)/(self.focal_length*img_height));
+        return x_dist_mm, y_dist_mm
+        
+        '''
+    
+    Returns x and y in mm
+    -------
+    int
+        DESCRIPTION.
+        This function takes the distance between origin and the test point in pixels and converts it to mm.
+        '''
+        return x_dist_mm, y_dist_mm
+    
+
+class Robot_TCP_comm(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.open_connection()
         
     def run(self):
         print("Start")
         print(img_points)
         robot_event.wait()
-            
-        while True:
-            robot_event.wait()
-            if len(img_points) > 0:
-                print(img_points[0][0])
-                #print(type(img_points[0][0]))
-                for i in range(len(img_points)):
-                    print("Start")
-                    #button_state = self.checkButton()
-                    #button_state_decoded = button_state.decode()
-                 #   print(img_points[i][0])
-                  #  print(type(img_points[i][0]))
-                    x_dist_pix, y_dist_pix = self.findDistance((img_points[i][0]), (img_points[i][1]))
-                    x_mm, y_mm = self.convertPixeltoMM(x_dist_pix, y_dist_pix)
-                    print(x_mm, y_mm)
-                   # print("Distance to point:")
-                    #print(x_mm, y_mm)
-                    #self.moveRobot(x_mm, y_mm)
-                    
-                    if terminateFlag == 1:
-                        break
+        robot_event.wait()
+        if len(img_points) > 0:
+            print(img_points[0][0])
+            #print(type(img_points[0][0]))
+            for i in range(len(img_points)):
+                print("Start")
+                #button_state = self.checkButton()
+                #button_state_decoded = button_state.decode()
+             #   print(img_points[i][0])
+              #  print(type(img_points[i][0]))
+                x_dist_pix, y_dist_pix = conversion.findDistance((img_points[i][0]), (img_points[i][1]))
+                x_mm, y_mm = conversion.convertPixeltoMM(x_dist_pix, y_dist_pix)
+                print(x_mm, y_mm)
+               # print("Distance to point:")
+                #print(x_mm, y_mm)
+                self.moveRobot(x_mm, y_mm)
+                
                 if terminateFlag == 1:
                     break
-        self.close()
+            if terminateFlag == 1:
+                self.close()
         
     def open_connection(self):
         # Create a TCP/IP socket
@@ -235,60 +275,54 @@ class Robot_TCP_comm(Thread):
         #print("Moving to probe")
         #time.sleep(0.1)
         turns = 0
-        while (voltages < str(1) and distance_measured > 20):
-            robot_event.wait()
-            self.recv.sendall(b"zShift = -1\n")
-            #print("Moving down")
+        self.recv.sendall(b"zShift = -1\n")
+        #print("Moving down")
+        time.sleep(0.1)
+        turns = turns + 1
+        #print(turns)
+        if turns == 600:
+            takePicFlag = 1
+            self.recv.sendall(b"zShift = 0\n")
+            '''while len(img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
+                if len(img_points) > 1:
+                    break
+            x_dist_pix, y_dist_pix = self.findDistance(img_points[1][0], img_points[1][1])
+            x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
+            send_x = "xShift = " + str(x_dist_mm) + "\n"
+            send_y = "yShift = " + str(y_dist_mm) + "\n"
+            print(x_mm, y_mm)
+            send_x_encoded = send_x.encode('utf-8')
+            send_y_encoded = send_y.encode('utf-8')
+            self.recv.sendall(send_x_encoded)
             time.sleep(0.1)
-            turns = turns + 1
-            #print(turns)
-            if turns == 600:
-                takePicFlag = 1
-                self.recv.sendall(b"zShift = 0\n")
-                '''while len(img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
-                    if len(img_points) > 1:
-                        break
-                x_dist_pix, y_dist_pix = self.findDistance(img_points[1][0], img_points[1][1])
-                x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
-                send_x = "xShift = " + str(x_dist_mm) + "\n"
-                send_y = "yShift = " + str(y_dist_mm) + "\n"
-                print(x_mm, y_mm)
-                send_x_encoded = send_x.encode('utf-8')
-                send_y_encoded = send_y.encode('utf-8')
-                self.recv.sendall(send_x_encoded)
-                time.sleep(0.1)
-                self.recv.sendall(send_y_encoded)
-                time.sleep(0.1)'''
-            if turns > 1400:
-                self.recv.sendall(b"zShift = 0\n")
-                time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
-                time.sleep(1)
-                print("Robot stopeed to avoid crash!")
-                break
-                time.sleep(0.1)
-            if (voltages > str(1)):
-                self.recv.sendall(b"zShift = 0\n")
-                #print("Robot stopped")
-                time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
-                time.sleep(1)
-                break
-            if terminateFlag == 1:
-                self.recv.sendall(b"zShift = 0\n")
-                #print("Robot stopped")
-                time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
-                time.sleep(1)
-                break
-            if (distance_measured < 20):
-                self.recv.sendall(b"zShift = 0\n")
-                #print("Robot stopped")
-                time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
-                time.sleep(1)
-                break
-        '''
+            self.recv.sendall(send_y_encoded)
+            time.sleep(0.1)'''
+        if turns > 1400:
+            self.recv.sendall(b"zShift = 0\n")
+            time.sleep(1)
+            self.recv.sendall(b"takepic = 1\n")
+            time.sleep(1)
+            print("Robot stopeed to avoid crash!")
+            time.sleep(0.1)
+        if (voltages > str(1)):
+            self.recv.sendall(b"zShift = 0\n")
+            #print("Robot stopped")
+            time.sleep(1)
+            self.recv.sendall(b"takepic = 1\n")
+            time.sleep(1)
+        if terminateFlag == 1:
+            self.recv.sendall(b"zShift = 0\n")
+            #print("Robot stopped")
+            time.sleep(1)
+            self.recv.sendall(b"takepic = 1\n")
+            time.sleep(1)
+        if (distance_measured < 20):
+            self.recv.sendall(b"zShift = 0\n")
+            #print("Robot stopped")
+            time.sleep(1)
+            self.recv.sendall(b"takepic = 1\n")
+            time.sleep(1)
+    '''
         Returns nothing
         -------
         int
@@ -301,43 +335,6 @@ class Robot_TCP_comm(Thread):
         print(BITS)
         return BITS
     
-    def findDistance(self, x_pix, y_pix):
-        #print(type(self.robot_origin_fixed[0]))
-        #print(x_pix, y_pix)
-        x_dist_pix = x_pix - self.robot_origin_fixed[0]
-        y_dist_pix = y_pix - self.robot_origin_fixed[1]
-        #print("Distance in x: ", x_dist_pix)
-        return (x_dist_pix), (y_dist_pix)
-    
-        '''
-    Returns the distance in x and y between origin and center point of the detected point in pixels.
-    -------
-    int
-        DESCRIPTION.
-        '''
-    
-    def convertPixeltoMM(self,x_dist_pix, y_dist_pix):
-        
-        x_dist_mm = float((self.camera_distance*x_dist_pix*self.sensor_width)/(self.focal_length*img_width));
-        y_dist_mm = float((self.camera_distance*y_dist_pix*self.sensor_height)/(self.focal_length*img_height));
-        return x_dist_mm, y_dist_mm
-    
-    def closeupConvertPixeltoMM(self,x_dist_pix, y_dist_pix):
-        global distance_measured
-        
-        x_dist_mm = float((distance_measured*x_dist_pix*self.sensor_width)/(self.focal_length*img_width));
-        y_dist_mm = float((distance_measured*y_dist_pix*self.sensor_height)/(self.focal_length*img_height));
-        return x_dist_mm, y_dist_mm
-        
-        '''
-    
-    Returns x and y in mm
-    -------
-    int
-        DESCRIPTION.
-        This function takes the distance between origin and the test point in pixels and converts it to mm.
-        '''
-        return x_dist_mm, y_dist_mm
     
     def scanHeight(self):
         x_1 = 0
@@ -396,6 +393,7 @@ class Video(Thread):
         self.sensor_height = 3.4565
         self.focal_length = 3.916
         self.cap = 0
+        self.cap, square_flag = self.startVideo("Run")
         return None
     def run(self):
         global box_x
@@ -405,27 +403,26 @@ class Video(Thread):
         global img_points
         
         camera_event.wait()
-        
-        self.cap, square_flag = self.startVideo("Run")
+    
         self.B,self.G,self.R = (100, 100, 200)
         
-        while True:
-            ret, img = self.cap.read()
-            cv.waitKey(1)
-            print(img.shape)
-        
-            fromCenter = False
-            r = cv.selectROI("Select region of interest", img, fromCenter)
-            print("Here rectangle", r)
-            img_points.append([r[0],r[1],r[2],r[3]])
-            rxp, ryp = robot_control.findDistance(r[0], r[1])
-            rx_mm, ry_mm = robot_control.convertPixeltoMM(rxp, ryp)
-            print("Rectangles mm", rx_mm, ry_mm)
-            ret, img_show = self.cap.read()
-            cv.imshow("Live camera feed", img_show)
-            cv.waitKey(1)
-            if terminateFlag == 1:
-                break
+        ret, img = self.cap.read()
+        cv.waitKey(1)
+        print(img.shape)
+    
+        fromCenter = False
+        r = cv.selectROI("Select region of interest", img, fromCenter)
+        print("Here rectangle", r)
+        img_points.append([r[0],r[1],r[2],r[3]])
+        rxp, ryp = conversion.findDistance(r[0], r[1])
+        rx_mm, ry_mm = conversion.convertPixeltoMM(rxp, ryp)
+        print("Rectangles mm", rx_mm, ry_mm)
+        ret, img_show = self.cap.read()
+        cv.imshow("Live camera feed", img_show)
+        cv.waitKey(1)
+        if terminateFlag == 1:
+            self.cap.release()
+            cv.destroyAllWindows()
         '''img_points = self.floodFill(img, r)
         cv.imshow("Original image", img)
         print(img.shape)
@@ -453,8 +450,6 @@ class Video(Thread):
             #print(img_points)
             if terminateFlag == 1:
                 break'''
-        self.cap.release()
-        cv.destroyAllWindows()
     
         
     def startVideo(self, run):
@@ -628,36 +623,34 @@ class Arduino(Thread):
         return None
     
     def run(self):
-        while True:
-            global text
-            global FSR_voltage
-            global distance_measured
-            self.data = self.readLines()
-         #   print(self.data)
-            #cleandata = arduino_control.cleanData(data)
-            self.cleandata = self.data.decode()
-            split = self.cleandata.split()
-          #  print("Received from Arduino")
-          #  print(split)
-            if len(split) > 1:
-                FSR_voltage = float(split[0].replace(',', ''))
-           #     print(FSR_voltage)
-            #    print(type(FSR_voltage))
-                #print("Distance")
-                distance_measured = int(float(split[1].replace(',', '')))
-                #print(distance_measured)
-               # print(type(distance))
-            else:
-                FSR_voltage = 0.0
-                distance_measured = 1000
-            #if len(split) <= 1:
-            self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state)
-            
-          #  print(self.text)
-            text = self.text
-            if terminateFlag == 1:
-                break
-        self.close()
+        global text
+        global FSR_voltage
+        global distance_measured
+        self.data = self.readLines()
+     #   print(self.data)
+        #cleandata = arduino_control.cleanData(data)
+        self.cleandata = self.data.decode()
+        split = self.cleandata.split()
+      #  print("Received from Arduino")
+      #  print(split)
+        if len(split) > 1:
+            FSR_voltage = float(split[0].replace(',', ''))
+       #     print(FSR_voltage)
+        #    print(type(FSR_voltage))
+            #print("Distance")
+            distance_measured = int(float(split[1].replace(',', '')))
+            #print(distance_measured)
+           # print(type(distance))
+        else:
+            FSR_voltage = 0.0
+            distance_measured = 1000
+        #if len(split) <= 1:
+        self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state)
+        
+      #  print(self.text)
+        text = self.text
+        if terminateFlag == 1:
+            self.close()
     
     def connectToArduino(self):
         try:
@@ -701,30 +694,28 @@ class Oscilloscope(Thread):
     
     def run(self):
         global voltages
-        while True:
-            self.voltages = self.getVoltage()
-            voltages = self.voltages
-            #qprint(voltages)
-            if(voltages > str(1)):
-                data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
-                self.inst.write("SYST:DISP:UPD ON")
-                self.inst.write("HCOP:DEST 'MMEM'")
-                self.inst.write("HCOP:DEV:LANG JPG")
-                self.inst.write("*OPC?")
-                self.inst.write("MMEM:NAME 'D:\Test.jpg'")
-                with open('C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test of voltage capture 16/08/2022.csv', 'a', encoding='UTF-8', newline = "\n") as f:
-    # create the csv writer
-                     header = ['Voltage']
-                     writer = csv.writer(f)
-                     writer.writerow(header)
-                     '''for d in range(len(data)):
-                         print(data[d:])'''
-    # write a row to the csv file
-                     writer.writerow(data)
-                     f.close()
-            if terminateFlag == 1:
-                break
-        self.close()
+        self.voltages = self.getVoltage()
+        voltages = self.voltages
+        #qprint(voltages)
+        if(voltages > str(1)):
+            data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
+            self.inst.write("SYST:DISP:UPD ON")
+            self.inst.write("HCOP:DEST 'MMEM'")
+            self.inst.write("HCOP:DEV:LANG JPG")
+            self.inst.write("*OPC?")
+            self.inst.write("MMEM:NAME 'D:\Test.jpg'")
+            with open('C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test of voltage capture 16/08/2022.csv', 'a', encoding='UTF-8', newline = "\n") as f:
+# create the csv writer
+                 header = ['Voltage']
+                 writer = csv.writer(f)
+                 writer.writerow(header)
+                 '''for d in range(len(data)):
+                     print(data[d:])'''
+# write a row to the csv file
+                 writer.writerow(data)
+                 f.close()
+        if terminateFlag == 1:
+            self.close()
     
     def getVoltage(self):
         self.inst.write("TRIG:MODE:AUTO")
@@ -747,18 +738,20 @@ robot_control = Robot_TCP_comm()
 arduino_control = Arduino(cleandata, text, voltages, button_state)
 oscilloscope = Oscilloscope(voltages)
 interface = Interface()
+conversion = Convert()
 
 
 #ret, mtx, dist, rvecs, tvecs = calibrateCamera()
 #print(rvecs)
-interface.start()
-camera_video.start()
-robot_control.start()
-arduino_control.start()
-oscilloscope.start()
-
-robot_control.join()
-camera_video.join()
-arduino_control.join()
-oscilloscope.join()
-interface.join()
+if __name__ =="__main__":
+    interface.start()
+    camera_video.start()
+    robot_control.start()
+    arduino_control.start()
+    oscilloscope.start()
+        
+    robot_control.join()
+    camera_video.join()
+    arduino_control.join()
+    oscilloscope.join()
+    interface.join()
