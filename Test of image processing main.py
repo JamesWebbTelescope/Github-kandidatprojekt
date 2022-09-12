@@ -83,8 +83,13 @@ class Interface(Thread):
         button5.setText("Terminate program")
         button5.move(64,160)
         button5.clicked.connect(self.button5_clicked)
+        
+        button5 = QPushButton(widget)
+        button5.setText("Close connection to robot")
+        button5.move(64,200)
+        button5.clicked.connect(self.button6_clicked)
 
-        widget.setGeometry(50,50,320,200)
+        widget.setGeometry(50,50,320,250)
         widget.setWindowTitle("ESD Test control")
         widget.show()
         sys.exit(app.exec_())
@@ -120,6 +125,10 @@ class Interface(Thread):
         robot_event.clear()
         camera_event.clear()
         print("Program terminated") 
+    
+    def button6_clicked(self):
+        robot_control.close()
+        print("Connection to robot closed") 
         
 class Convert(Thread):
     def __init__(self):
@@ -174,35 +183,35 @@ class Robot_TCP_comm(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.recv.settimeout(2)
         self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.send.settimeout(2)
         self.open_connection()
         
     def run(self):
         print("Start")
         print(img_points)
         robot_event.wait()
-        robot_event.wait()
-        if len(img_points) > 0:
-            print(img_points[0][0])
-            #print(type(img_points[0][0]))
-            for i in range(len(img_points)):
+        while True:
+            if len(img_points) > 0:
+                print(img_points[0][0])
+                #print(type(img_points[0][0]))
                 print("Start")
                 #button_state = self.checkButton()
                 #button_state_decoded = button_state.decode()
-             #   print(img_points[i][0])
-              #  print(type(img_points[i][0]))
-                x_dist_pix, y_dist_pix = conversion.findDistance((img_points[i][0]), (img_points[i][1]))
+                #  print(img_points[i][0])
+                #  print(type(img_points[i][0]))
+                x_dist_pix, y_dist_pix = conversion.findDistance((img_points[0][0]), (img_points[0][1]))
                 x_mm, y_mm = conversion.convertPixeltoMM(x_dist_pix, y_dist_pix)
                 print(x_mm, y_mm)
-               # print("Distance to point:")
+                # print("Distance to point:")
                 #print(x_mm, y_mm)
                 self.moveRobot(x_mm, y_mm)
-                
+                print("Done")
                 if terminateFlag == 1:
                     break
-            if terminateFlag == 1:
-                self.close()
-        
+        self.close()
+                
     def open_connection(self):
         # Create a TCP/IP socket
 
@@ -402,32 +411,32 @@ class Video(Thread):
         global takePicFlag
         global img_points
         
-        camera_event.wait()
-    
-        self.B,self.G,self.R = (100, 100, 200)
-        
-        ret, img = self.cap.read()
-        cv.waitKey(1)
-        print(img.shape)
-    
-        fromCenter = False
-        r = cv.selectROI("Select region of interest", img, fromCenter)
-        print("Here rectangle", r)
-        img_points.append([r[0],r[1],r[2],r[3]])
-        rxp, ryp = conversion.findDistance(r[0], r[1])
-        rx_mm, ry_mm = conversion.convertPixeltoMM(rxp, ryp)
-        print("Rectangles mm", rx_mm, ry_mm)
-        ret, img_show = self.cap.read()
-        cv.imshow("Live camera feed", img_show)
-        cv.waitKey(1)
-        if terminateFlag == 1:
-            self.cap.release()
-            cv.destroyAllWindows()
-        '''img_points = self.floodFill(img, r)
-        cv.imshow("Original image", img)
-        print(img.shape)
-        
         while True:
+            camera_event.wait()
+        
+            self.B,self.G,self.R = (100, 100, 200)
+            
+            ret, img = self.cap.read()
+            cv.waitKey(1)
+            print(img.shape)
+        
+            fromCenter = False
+            r = cv.selectROI("Select region of interest", img, fromCenter)
+            print("Here rectangle", r)
+            img_points = self.floodFill(img, r)
+            #cv.imshow("Original image", img)
+            print(img.shape)
+            #img_points.append([r[0],r[1],r[2],r[3]])
+            rxp, ryp = conversion.findDistance(r[0], r[1])
+            rx_mm, ry_mm = conversion.convertPixeltoMM(rxp, ryp)
+            print("Rectangles mm", rx_mm, ry_mm)
+            ret, img_show = self.cap.read()
+            cv.imshow("Live camera feed", img_show)
+            if terminateFlag == 1:
+                break
+        self.close()
+        
+        '''while True:
             camera_event.wait()
             try:
                 #cv.imwrite("Original image.png", img)
@@ -457,7 +466,7 @@ class Video(Thread):
             try:
                cap = cv.VideoCapture(0, cv.CAP_DSHOW)
                cap.set(cv.CAP_PROP_AUTOFOCUS, 0.32)
-               cap.set(cv.CAP_PROP_BRIGHTNESS, 0) 
+               cap.set(cv.CAP_PROP_BRIGHTNESS, 2) 
                cap.set(cv.CAP_PROP_FRAME_WIDTH, img_width)
                cap.set(cv.CAP_PROP_FRAME_HEIGHT, img_height)
                #cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1.0)
@@ -609,6 +618,10 @@ class Video(Thread):
                     cv.imshow("Second detected rectangles", img_rect)
                     cv.imwrite("Second detected rectangles.png", img_rect)
         return img_points
+    
+    def close(self):
+        self.cap.release()
+        cv.destroyAllWindows()
 
 
 class Arduino(Thread):
@@ -626,32 +639,34 @@ class Arduino(Thread):
         global text
         global FSR_voltage
         global distance_measured
-        self.data = self.readLines()
-     #   print(self.data)
-        #cleandata = arduino_control.cleanData(data)
-        self.cleandata = self.data.decode()
-        split = self.cleandata.split()
-      #  print("Received from Arduino")
-      #  print(split)
-        if len(split) > 1:
-            FSR_voltage = float(split[0].replace(',', ''))
-       #     print(FSR_voltage)
-        #    print(type(FSR_voltage))
-            #print("Distance")
-            distance_measured = int(float(split[1].replace(',', '')))
-            #print(distance_measured)
-           # print(type(distance))
-        else:
-            FSR_voltage = 0.0
-            distance_measured = 1000
-        #if len(split) <= 1:
-        self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state)
+        while True:
+            self.data = self.readLines()
+         #   print(self.data)
+            #cleandata = arduino_control.cleanData(data)
+            self.cleandata = self.data.decode()
+            split = self.cleandata.split()
+          #  print("Received from Arduino")
+          #  print(split)
+            if len(split) > 1:
+                FSR_voltage = float(split[0].replace(',', ''))
+           #     print(FSR_voltage)
+            #    print(type(FSR_voltage))
+                #print("Distance")
+                distance_measured = int(float(split[1].replace(',', '')))
+                #print(distance_measured)
+               # print(type(distance))
+            else:
+                FSR_voltage = 0.0
+                distance_measured = 1000
+            #if len(split) <= 1:
+            self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state)
+            
+          #  print(self.text)
+            text = self.text
+            if terminateFlag == 1:
+                break
+        self.close()
         
-      #  print(self.text)
-        text = self.text
-        if terminateFlag == 1:
-            self.close()
-    
     def connectToArduino(self):
         try:
             self.comm = serial.Serial('COM3', 115200, timeout=.1)
@@ -680,7 +695,7 @@ class Oscilloscope(Thread):
         rm = pyvisa.ResourceManager()
         print(rm.list_resources('?*'))
         try:
-            self.inst = rm.open_resource('TCPIP0::192.168.11.8::inst0::INSTR', read_termination='\n')
+            self.inst = rm.open_resource('TCPIP0::192.168.11.8::inst0::INSTR', read_termination='\n', open_timeout=1000)
             print(self.inst.query('*IDN?'))
             self.inst.write("RUN;*OPC?")
             self.inst.write("TRIG:MODE AUTO")
@@ -694,29 +709,31 @@ class Oscilloscope(Thread):
     
     def run(self):
         global voltages
-        self.voltages = self.getVoltage()
-        voltages = self.voltages
-        #qprint(voltages)
-        if(voltages > str(1)):
-            data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
-            self.inst.write("SYST:DISP:UPD ON")
-            self.inst.write("HCOP:DEST 'MMEM'")
-            self.inst.write("HCOP:DEV:LANG JPG")
-            self.inst.write("*OPC?")
-            self.inst.write("MMEM:NAME 'D:\Test.jpg'")
-            with open('C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test of voltage capture 16/08/2022.csv', 'a', encoding='UTF-8', newline = "\n") as f:
-# create the csv writer
-                 header = ['Voltage']
-                 writer = csv.writer(f)
-                 writer.writerow(header)
-                 '''for d in range(len(data)):
-                     print(data[d:])'''
-# write a row to the csv file
-                 writer.writerow(data)
-                 f.close()
-        if terminateFlag == 1:
-            self.close()
-    
+        while True:
+            self.voltages = self.getVoltage()
+            voltages = self.voltages
+            #qprint(voltages)
+            if(voltages > str(1)):
+                data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
+                self.inst.write("SYST:DISP:UPD ON")
+                self.inst.write("HCOP:DEST 'MMEM'")
+                self.inst.write("HCOP:DEV:LANG JPG")
+                self.inst.write("*OPC?")
+                self.inst.write("MMEM:NAME 'D:\Test.jpg'")
+                with open('C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test of voltage capture 16/08/2022.csv', 'a', encoding='UTF-8', newline = "\n") as f:
+    # create the csv writer
+                     header = ['Voltage']
+                     writer = csv.writer(f)
+                     writer.writerow(header)
+                     '''for d in range(len(data)):
+                         print(data[d:])'''
+    # write a row to the csv file
+                     writer.writerow(data)
+                     f.close()
+            if terminateFlag == 1:
+                break
+        self.close()
+        
     def getVoltage(self):
         self.inst.write("TRIG:MODE:AUTO")
         voltages = self.inst.query_ascii_values("MEAS1:RES:ACT?", 'f')
@@ -739,8 +756,6 @@ arduino_control = Arduino(cleandata, text, voltages, button_state)
 oscilloscope = Oscilloscope(voltages)
 interface = Interface()
 conversion = Convert()
-
-
 #ret, mtx, dist, rvecs, tvecs = calibrateCamera()
 #print(rvecs)
 if __name__ =="__main__":
@@ -749,7 +764,8 @@ if __name__ =="__main__":
     robot_control.start()
     arduino_control.start()
     oscilloscope.start()
-        
+    
+    
     robot_control.join()
     camera_video.join()
     arduino_control.join()
