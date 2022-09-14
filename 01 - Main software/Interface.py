@@ -82,12 +82,12 @@ class Interface(Thread):
         global camera_event
         Settings.robot_event.set()
         Settings.camera_event.set()
-        terminateFlag = 1
+        Settings.terminateFlag = 1
         Settings.robot_event.clear()
         Settings.camera_event.clear()
         print("Program terminated") 
     
     def button6_clicked(self):
-        robot_control.close()
+        robot_control.Robot_TCP_comm.close(robot_control.Robot_TCP_comm)
         print("Connection to robot closed") 
         

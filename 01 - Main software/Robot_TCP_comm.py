@@ -10,7 +10,7 @@ import sys
 import time
 from threading import Thread
 import Settings
-import Convert
+
 
 class Robot_TCP_comm(Thread):
     def __init__(self):
@@ -23,26 +23,29 @@ class Robot_TCP_comm(Thread):
         
     def run(self):
         print("Start")
-        print(Settings.Settings.img_points)
+        print(Settings.img_points)
         Settings.robot_event.wait()
         while True:
             if len(Settings.img_points) > 0:
-                print(Settings.img_points[0][0])
+                #print(Settings.img_points)
                 #print(type(Settings.Settings.img_points[0][0]))
                 print("Start")
                 #button_state = self.checkButton()
                 #button_state_decoded = button_state.decode()
                 #  print(Settings.Settings.img_points[i][0])
                 #  print(type(Settings.Settings.img_points[i][0]))
-                x_dist_pix, y_dist_pix = Convert.findDistance((Settings.img_points[0][0]), (Settings.img_points[0][1]))
-                x_mm, y_mm = Convert.convertPixeltoMM(x_dist_pix, y_dist_pix)
-                print(x_mm, y_mm)
+                #x_dist_pix, y_dist_pix = Convert.Convert.findDistance((Settings.img_points[0][0]), (Settings.img_points[0][1]))
+                #x_mm, y_mm = Convert.Convert.convertPixeltoMM(x_dist_pix, y_dist_pix)
+                print(Settings.rx_mm, Settings.ry_mm)
                 # print("Distance to point:")
                 #print(x_mm, y_mm)
-                self.moveRobot(x_mm, y_mm)
+                self.moveRobot(Settings.rx_mm, Settings.ry_mm)
                 print("Done")
                 if Settings.terminateFlag == 1:
                     break
+        print("Closing")
+        self.recv.sendall(b"takepic = 1\n")
+        time.sleep(1)
         self.close()
                 
     def open_connection(self):
@@ -99,71 +102,82 @@ class Robot_TCP_comm(Thread):
         send_y_encoded = send_y.encode('utf-8')
         #print("Moving")
         #print(x_dist_mm)
-        #print(send_y_encoded)
+        print(send_y_encoded)
+        print(send_x_encoded)
         #self.recv.sendall(b"xShift = ")
         #self.recv.sendall(np.byte(x_dist_mm))
         #self.recv.sendall(b"\n")
         self.recv.sendall(send_x_encoded)
-        time.sleep(0.1)
+        time.sleep(1)
+        print("Sent x coordinates")
         #self.recv.sendall(b"yShift = ")
         #self.recv.sendall(np.byte(y_dist_mm))
         #self.recv.sendall(b"\n")
         self.recv.sendall(send_y_encoded)
-        time.sleep(0.1)
-        #print("Found the test point")
-        for i in range(55):
+        time.sleep(2)
+        print("Sent y coordinate")
+        print("Found the test point")
+        self.recv.sendall(b"yShift = 55\n")
+        time.sleep(1)
+        '''for i in range(55):
             self.recv.sendall(b"yShift = 1\n")
-            time.sleep(0.1)
+            time.sleep(0.1)'''
         #print("Moving to probe")
         #time.sleep(0.1)
         turns = 0
-        self.recv.sendall(b"zShift = -1\n")
-        #print("Moving down")
-        time.sleep(0.1)
-        turns = turns + 1
-        #print(turns)
-        if turns == 600:
-            takePicFlag = 1
-            self.recv.sendall(b"zShift = 0\n")
-            '''while len(Settings.Settings.img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
-                if len(Settings.Settings.img_points) > 1:
-                    break
-            x_dist_pix, y_dist_pix = self.findDistance(Settings.Settings.img_points[1][0], Settings.Settings.img_points[1][1])
-            x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
-            send_x = "xShift = " + str(x_dist_mm) + "\n"
-            send_y = "yShift = " + str(y_dist_mm) + "\n"
-            print(x_mm, y_mm)
-            send_x_encoded = send_x.encode('utf-8')
-            send_y_encoded = send_y.encode('utf-8')
-            self.recv.sendall(send_x_encoded)
+        while (Settings.distance_measured > 20 and Settings.voltages < str(1)):
+            Settings.robot_event.wait()
+            self.recv.sendall(b"zShift = -1\n")
+            #print("Moving down")
             time.sleep(0.1)
-            self.recv.sendall(send_y_encoded)
-            time.sleep(0.1)'''
-        if turns > 1400:
-            self.recv.sendall(b"zShift = 0\n")
-            time.sleep(1)
-            self.recv.sendall(b"takepic = 1\n")
-            time.sleep(1)
-            print("Robot stopeed to avoid crash!")
-            time.sleep(0.1)
-        if  (Settings.voltages > str(1)):
-            self.recv.sendall(b"zShift = 0\n")
-            #print("Robot stopped")
-            time.sleep(1)
-            self.recv.sendall(b"takepic = 1\n")
-            time.sleep(1)
-        if Settings.terminateFlag == 1:
-            self.recv.sendall(b"zShift = 0\n")
-            #print("Robot stopped")
-            time.sleep(1)
-            self.recv.sendall(b"takepic = 1\n")
-            time.sleep(1)
-        if (distance_measured < 20):
-            self.recv.sendall(b"zShift = 0\n")
-            #print("Robot stopped")
-            time.sleep(1)
-            self.recv.sendall(b"takepic = 1\n")
-            time.sleep(1)
+            turns = turns + 1
+            #print(turns)
+            if turns == 600:
+                takePicFlag = 1
+                self.recv.sendall(b"zShift = 0\n")
+                '''while len(Settings.Settings.img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
+                    if len(Settings.Settings.img_points) > 1:
+                        break
+                x_dist_pix, y_dist_pix = self.findDistance(Settings.Settings.img_points[1][0], Settings.Settings.img_points[1][1])
+                x_mm, y_mm = self.closeupConvertPixeltoMM(x_dist_pix, y_dist_pix)
+                send_x = "xShift = " + str(x_dist_mm) + "\n"
+                send_y = "yShift = " + str(y_dist_mm) + "\n"
+                print(x_mm, y_mm)
+                send_x_encoded = send_x.encode('utf-8')
+                send_y_encoded = send_y.encode('utf-8')
+                self.recv.sendall(send_x_encoded)
+                time.sleep(0.1)
+                self.recv.sendall(send_y_encoded)
+                time.sleep(0.1)'''
+            if turns > 1400:
+                self.recv.sendall(b"zShift = 0\n")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n")
+                time.sleep(1)
+                print("Robot stopeed to avoid crash!")
+                time.sleep(0.1)
+                break
+            if  (Settings.voltages > str(1)):
+                self.recv.sendall(b"zShift = 0\n")
+                #print("Robot stopped")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n")
+                time.sleep(1)
+                break
+            if Settings.terminateFlag == 1:
+                self.recv.sendall(b"zShift = 0\n")
+                #print("Robot stopped")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n")
+                time.sleep(1)
+                break
+            if (Settings.distance_measured < 20):
+                self.recv.sendall(b"zShift = 0\n")
+                #print("Robot stopped")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n")
+                time.sleep(1)
+                break
     '''
         Returns nothing
         -------

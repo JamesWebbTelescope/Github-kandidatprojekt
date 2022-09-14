@@ -34,8 +34,8 @@ class Oscilloscope(Thread):
         while True:
             self.voltages = self.getVoltage()
             Settings.voltages = self.voltages
-            #qprint(voltages)
-            if(voltages > str(1)):
+            print(Settings.voltages)
+            if(Settings.voltages > str(1)):
                 data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
                 self.inst.write("SYST:DISP:UPD ON")
                 self.inst.write("HCOP:DEST 'MMEM'")

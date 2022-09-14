@@ -14,7 +14,7 @@ class Convert():
     def findDistance(x_pix, y_pix):
         #print(type(self.robot_origin_fixed[0]))
         #print(x_pix, y_pix)
-        x_dist_pix = x_pix - Settings.robot_origin_fixed[0]
+        x_dist_pix = Settings.robot_origin_fixed[0] - x_pix
         y_dist_pix = y_pix - Settings.robot_origin_fixed[1]
         #print("Distance in x: ", x_dist_pix)
         return (x_dist_pix), (y_dist_pix)

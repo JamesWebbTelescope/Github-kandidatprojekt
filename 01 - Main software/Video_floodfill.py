@@ -45,11 +45,14 @@ class Video(Thread):
             fromCenter = False
             r = cv.selectROI("Select region of interest", img, fromCenter)
             print("Here rectangle", r)
-            #Settings.img_points = self.floodFill(img, r)
+            Settings.img_points = self.floodFill(img, r)
+            #print(r)
+            #print(Settings.img_points)
             #cv.imshow("Original image", img)
             print(img.shape)
-            Settings.img_points.append([r[0],r[1],r[2],r[3]])
-            rxp, ryp = Convert.Convert.findDistance(r[0], r[1])
+            #Settings.img_points.append([r[0],r[1],r[2],r[3]])
+            #for i in range(len(img_points)):
+            rxp, ryp = Convert.Convert.findDistance(img_points[0][0], img_points[0][1])
             Settings.rx_mm, Settings.ry_mm = Convert.Convert.convertPixeltoMM(rxp, ryp)
             print("Rectangles mm", Settings.rx_mm, Settings.ry_mm)
             ret, img_show = self.cap.read()
