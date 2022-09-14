@@ -117,7 +117,7 @@ class Robot_TCP_comm(Thread):
         time.sleep(2)
         print("Sent y coordinate")
         print("Found the test point")
-        self.recv.sendall(b"yShift = 55\n")
+        self.recv.sendall(b"yShift = 65\n")
         time.sleep(1)
         '''for i in range(55):
             self.recv.sendall(b"yShift = 1\n")
@@ -149,7 +149,7 @@ class Robot_TCP_comm(Thread):
                 time.sleep(0.1)
                 self.recv.sendall(send_y_encoded)
                 time.sleep(0.1)'''
-            if turns > 1400:
+            if turns > 1800:
                 self.recv.sendall(b"zShift = 0\n")
                 time.sleep(1)
                 self.recv.sendall(b"takepic = 1\n")
