@@ -134,6 +134,10 @@ class Video(Thread):
             box_x, box_y, box_w, box_h = cv.boundingRect(box)
             img_rect = cv.drawContours(orig_img, [box], 0, (255, 0, 0), offset = (r[0], r[1]), thickness = 2)
             img_points.append([box[0][0]+r[0], box[0][1]+r[1], box_w, box_h])
+            for i in box:
+                cv.circle(orig_img,(i[0],i[1]), 3, (0,255,0), -1)
+                imgplot = cv.imshow(orig_i)
+                plt.show()
         cv.imshow("Rectangles", img_rect)
         cv.imwrite("Rectangles floodfill.png", img_rect)
         return img_points
