@@ -5,9 +5,9 @@ Created on Thu Sep 15 09:05:30 2022
 @author: Near-field scanner
 """
 
-import Video_corners
-import Robot_TCP_comm
-import Interface
+import Classfiles.Video_corners as Video_corners
+import Classfiles.Robot_TCP_comm as Robot_TCP_comm
+import Classfiles.Interface as Interface
 
 interface = Interface.Interface()
 camera_video = Video_corners.Video("Run")
