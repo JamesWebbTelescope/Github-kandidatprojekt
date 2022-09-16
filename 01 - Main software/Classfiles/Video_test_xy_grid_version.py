@@ -39,6 +39,7 @@ class Video(Thread):
             self.B,self.G,self.R = (100, 100, 200)
             
             ret, img = self.cap.read()
+            cv.circle(img,(int(Settings.img_width/2),int(Settings.img_height/2)), 3, (255,0,0), -1)
             cv.waitKey(1)
             print(img.shape)
         

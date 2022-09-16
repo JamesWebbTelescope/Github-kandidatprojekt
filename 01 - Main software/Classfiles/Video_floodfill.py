@@ -8,8 +8,8 @@ Created on Wed Sep 14 08:49:11 2022
 import cv2 as cv
 from threading import Thread
 import numpy as np
-import Settings
-import Convert
+import Classfiles.Settings as Settings
+import Classfiles.Convert as Convert
 import time
 
 class Video(Thread):

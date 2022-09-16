@@ -5,10 +5,10 @@ Created on Wed Sep 14 09:52:16 2022
 @author: Near-field scanner
 """
 
-import Video_floodfill
-import Interface
-import Robot_TCP_comm
-import Settings
+import Classfiles.Video_floodfill as Video_floodfill
+import Classfiles.Interface as Interface
+import Classfiles.Robot_TCP_comm as Robot_TCP_comm
+import Classfiles.Settings as Settings
 
 camera_video = Video_floodfill.Video(Settings.text)
 interface = Interface.Interface()

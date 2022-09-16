@@ -49,6 +49,7 @@ class Video(Thread):
             self.B,self.G,self.R = (100, 100, 200)
             
             ret, img = self.cap.read()
+            cv.circle(img,(int(Settings.img_width/2),int(Settings.img_height/2)), 3, (255,0,0), -1)
             cv.waitKey(1)
             print(img.shape)
         
@@ -57,7 +58,7 @@ class Video(Thread):
             print("Here rectangle", r)
             Settings.img_points = self.floodFill(img, r)
             #print(r)
-            #print(Settings.img_points)
+            print(Settings.img_points)
             #cv.imshow("Original image", img)
             print(img.shape)
             #Settings.img_points.append([r[0],r[1],r[2],r[3]])
@@ -144,10 +145,11 @@ class Video(Thread):
             box_x, box_y, box_w, box_h = cv.boundingRect(box)
             img_rect = cv.drawContours(orig_img, [box], 0, (255, 0, 0), offset = (r[0], r[1]), thickness = 2)
             target_x = box_x+int(box_w/3)+r[0]
-            target_y = box_y+int(box_h/3)+r[0]
+            target_y = box_y+int(box_h/3)+r[1]
             img_points.append([target_x, target_y])
             cv.circle(orig_img,(box_x+int(box_w/3)+r[0],box_y+int(box_h/3)+r[1]), 3, (0,255,0), -1)
             cv.imshow("Target nr " + str(c), orig_img)
+            cv.imwrite("Target nr " + str(c) + ".png", orig_img)
             '''for i in box:
                 corners = corners + 1
                 cv.circle(orig_img,(i[0]+r[0],i[1]+r[1]), 3, (0,255,0), -1)
