@@ -9,6 +9,7 @@ from threading import Thread
 import pyvisa
 import csv
 import Classfiles.Settings as Settings
+import datetime
 
 class Oscilloscope(Thread):
     def __init__(self, voltages):
@@ -35,6 +36,10 @@ class Oscilloscope(Thread):
             self.voltages = self.getVoltage()
             Settings.voltages = self.voltages
             #print(Settings.voltages)
+            now = datetime.datetime.now()
+            filename = "C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test capture.csv"
+            #print(now)
+            #print(type(str(now)))
             if(Settings.voltages > str(1)):
                 data = self.inst.query_ascii_values("CHAN1:WAV1:DATA?")
                 self.inst.write("SYST:DISP:UPD ON")
@@ -42,7 +47,7 @@ class Oscilloscope(Thread):
                 self.inst.write("HCOP:DEV:LANG JPG")
                 self.inst.write("*OPC?")
                 self.inst.write("MMEM:NAME 'D:\Test.jpg'")
-                with open('C:/Users/Near-field scanner/Documents/Near_Field_Scanner_GUI_source/sandbox/Viktor From/Test of voltage capture 16/08/2022.csv', 'a', encoding='UTF-8', newline = "\n") as f:
+                with open(filename, 'a', encoding='UTF-8', newline = "\n") as f:
     # create the csv writer
                      header = ['Voltage']
                      writer = csv.writer(f)

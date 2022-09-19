@@ -5,8 +5,8 @@ Created on Wed Sep 14 12:58:47 2022
 @author: Near-field scanner
 """
 
-import Oscilloscope
-import Settings
+import Classfiles.Oscilloscope as Oscilloscope
+import Classfiles.Settings as Settings
 
 oscilloscope = Oscilloscope.Oscilloscope(Settings.voltages)
 
