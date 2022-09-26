@@ -15,7 +15,9 @@ class Convert():
         #print(type(self.robot_origin_fixed[0]))
         #print(x_pix, y_pix)
         x_dist_pix = Settings.robot_origin_fixed[0] - x_pix
+        #Get the distance in x in pixels from the start position of the robot.
         y_dist_pix = y_pix - Settings.robot_origin_fixed[1]
+        #Get the distance in y in pixels from the start position of the robot.
         #print("Distance in x: ", x_dist_pix)
         return (x_dist_pix), (y_dist_pix)
     
@@ -30,6 +32,7 @@ class Convert():
         
         x_dist_mm = float((Settings.camera_distance*x_dist_pix*Settings.sensor_width)/(Settings.focal_length*Settings.img_width));
         y_dist_mm = float((Settings.camera_distance*y_dist_pix*Settings.sensor_height)/(Settings.focal_length*Settings.img_height));
+        #Convert the distance in pixels to a distance in mm
         return x_dist_mm, y_dist_mm
     
     def closeupConvertPixeltoMM(self,x_dist_pix, y_dist_pix, distance_measured):

@@ -25,7 +25,7 @@ class Video(Thread):
         self.text = text
         self.model = []
         self.class_names = ['DP700B750T105518', 'DP900N1200TU104204']
-        Thread.__init__(self)
+        Thread.__init__(self) #Initialize the class as a thread
         self.camera_matrix = np.array([[3.81, 0, 2.018], [0, 3.81, 2.018], [0, 0, 1]])
         self.camera_distance_2 = 100000.0
         self.sensor_width = 4.54
@@ -41,10 +41,10 @@ class Video(Thread):
         global takePicFlag
         global img_points
         
-        self.cap, square_flag = self.startVideo(self.text)
+        self.cap, square_flag = self.startVideo(self.text) #Take control of the camera.
         
         while True:
-            Settings.camera_event.wait()
+            Settings.camera_event.wait() #Wait for the start camera button to be pressed.
         
             self.B,self.G,self.R = (100, 100, 200)
             

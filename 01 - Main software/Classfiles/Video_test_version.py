@@ -24,7 +24,7 @@ class Video(Thread):
         self.sensor_height = 3.4565
         self.focal_length = 3.916
         self.cap = 0
-        self.cap, square_flag = self.startVideo("Run")
+        self.cap, square_flag = self.startVideo("Test")
         return None
     def run(self):
         global box_x
@@ -38,7 +38,8 @@ class Video(Thread):
         
             self.B,self.G,self.R = (100, 100, 200)
             
-            ret, img = self.cap.read()
+            #ret, img = self.cap.read()
+            img = self.cap
             cv.waitKey(1)
             print(img.shape)
         
@@ -52,8 +53,8 @@ class Video(Thread):
             rxp, ryp = Convert.Convert.findDistance(r[0], r[1])
             Settings.rx_mm, Settings.ry_mm = Convert.Convert.convertPixeltoMM(rxp, ryp)
             print("Rectangles mm", Settings.rx_mm, Settings.ry_mm)
-            ret, img_show = self.cap.read()
-            cv.imshow("Live camera feed", img_show)
+            #ret, img_show = self.cap.read()
+            #cv.imshow("Live camera feed", img_show)
             if Settings.terminateFlag == 1:
                 break
         self.close()

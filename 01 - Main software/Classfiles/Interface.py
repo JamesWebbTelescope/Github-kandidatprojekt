@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 14 08:13:30 2022
 
-@author: Near-field scanner
+@author: Viktor From
 """
 import sys
 from threading import Thread
