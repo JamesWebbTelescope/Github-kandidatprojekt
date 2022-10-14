@@ -48,38 +48,38 @@ class Robot_TCP_comm(Thread):
         time.sleep(1)
         self.close()
                 
-    def open_connection(self):
+    def open_connection(self): #This function is for starting the communication with the robot.
         # Create a TCP/IP socket
 
         # Connect the socket to the port where the server is listening
-            receive_address = ("192.168.11.2", 23)
-            send_address = ("192.168.11.2", 49152)
-            print('connecting to %s port %s' % receive_address)
-            try:
-               self.recv.connect(receive_address)
+            receive_address = ("192.168.11.2", 23) #Set the address of the robot's receiver port on port 23.
+            send_address = ("192.168.11.2", 49152) #Set the address of the robot's send port on port 49152.
+            print('connecting to %s port %s' % receive_address) #Print the address for the receive port
+            try: #Put inside a try-block to catch failures.
+               self.recv.connect(receive_address) #Connect to the receive port.
                message = b''
-               print(sys.stderr, 'sending "%s"' % message)
+               print(sys.stderr, 'sending "%s"' % message) 
 
-               self.recv.sendall(message)
+               self.recv.sendall(message) #Send an empty message to the robot.
                time.sleep(0.2)
-               self.recv.sendall(b"as\n")
+               self.recv.sendall(b"as\n") #Send "as"
                time.sleep(0.8)
-               self.recv.sendall(b"ZPOWER ON\n")
+               self.recv.sendall(b"ZPOWER ON\n") #Start the robot's internal motors.
                time.sleep(1)
-               self.recv.sendall(b"EXECUTE main\n")
+               self.recv.sendall(b"EXECUTE main\n") #Start the main program of the robot.
                time.sleep(1)
-               self.recv.sendall(b"open_flag = 1\n")
+               self.recv.sendall(b"open_flag = 1\n") #Tell the robot to open up its send port.
                time.sleep(1)
-               self.send.connect(send_address)
-               received = self.send.recv(1024)
+               self.send.connect(send_address) #Connect to the send port.
+               received = self.send.recv(1024) #Receive a message from the robot, confirming that everything's in order.
                print("Connection made")
                print(received)
-               self.recv.sendall(b"takepic = 1\n")
+               self.recv.sendall(b"takepic = 1\n") #Tell the robot to go to the starting position.
                time.sleep(1)
-            except socket.error as e:
-                print(e)
+            except socket.error as e: #If an error happens
+                print(e) #Print out the error
             except:
-                print("No connection")
+                print("No connection") #Catch all other errors.
     
     def close(self):
         self.recv.sendall(b"close_flag = 1\n")
@@ -125,15 +125,15 @@ class Robot_TCP_comm(Thread):
         #print("Moving to probe")
         #time.sleep(0.1)
         turns = 0
-        while (Settings.distance_measured > 20 and Settings.voltages < str(1)):
-            Settings.robot_event.wait()
-            self.recv.sendall(b"zShift = -1\n")
+        while (Settings.distance_measured > 20 and Settings.voltages < str(1)): #While the distance measured is above 20 mm and the voltage measured is below 1 volt.
+            Settings.robot_event.wait() #Wait for the robot control button to be pressed
+            self.recv.sendall(b"zShift = -1\n") #Move the robot down.
             #print("Moving down")
             time.sleep(0.1)
-            turns = turns + 1
+            turns = turns + 1 #Count the number of times it has moved down.
             #print(turns)
             if turns == 600:
-                takePicFlag = 1
+                takePicFlag = 1 #Deprecated
                 self.recv.sendall(b"zShift = 0\n")
                 '''while len(Settings.Settings.img_points) == 1: #This is to ensure that the thread doesn't break if the list of points isn't bigger than one point set
                     if len(Settings.Settings.img_points) > 1:
@@ -149,34 +149,34 @@ class Robot_TCP_comm(Thread):
                 time.sleep(0.1)
                 self.recv.sendall(send_y_encoded)
                 time.sleep(0.1)'''
-            if turns > 1710:
-                self.recv.sendall(b"zShift = 0\n")
+            if turns > 1710: #If the robot has moved down more than 600 mm
+                self.recv.sendall(b"zShift = 0\n") #Stop the robot
                 time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
+                self.recv.sendall(b"takepic = 1\n") #Go to starting position
                 time.sleep(1)
                 print(turns)
-                print("Robot stopeed to avoid crash!")
+                print("Robot stopeed to avoid crash!") #Print a warning
                 time.sleep(0.1)
                 break
-            if  (Settings.voltages > str(1)):
-                self.recv.sendall(b"zShift = 0\n")
+            if  (Settings.voltages > str(1)): #If the voltage is above 1.
+                self.recv.sendall(b"zShift = 0\n") #Stop the robot.
                 #print("Robot stopped")
                 time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
+                self.recv.sendall(b"takepic = 1\n") #Go to starting position
                 time.sleep(1)
                 break
-            if Settings.terminateFlag == 1:
-                self.recv.sendall(b"zShift = 0\n")
+            if Settings.terminateFlag == 1: #If the program is terminated.
+                self.recv.sendall(b"zShift = 0\n") #Stop the robot
                 #print("Robot stopped")
                 time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
+                self.recv.sendall(b"takepic = 1\n") #Go to starting position
                 time.sleep(1)
                 break
-            if (Settings.distance_measured < 20):
-                self.recv.sendall(b"zShift = 0\n")
+            if (Settings.distance_measured < 20): #If the robot is too close to anything.
+                self.recv.sendall(b"zShift = 0\n") #Stop the robot
                 #print("Robot stopped")
                 time.sleep(1)
-                self.recv.sendall(b"takepic = 1\n")
+                self.recv.sendall(b"takepic = 1\n") #Go to starting position.
                 time.sleep(1)
                 break
     '''
@@ -186,14 +186,14 @@ class Robot_TCP_comm(Thread):
             DESCRIPTION.
             This function sends the distance in x and y in mm to the robot for the robot to move.
              '''
-    def checkButton(self):
-        self.recv.sendall(b"BUTTON_FLAG = 1\n")
+    def checkButton(self): #Deprecated
+        self.recv.sendall(b"BUTTON_FLAG = 1\n") #Get the state of the button mounted on the robot
         BITS = self.send.recv(1024)
         print(BITS)
         return BITS
     
     
-    def scanHeight(self):
+    def scanHeight(self): #Deprecated
         x_1 = 0
         x_2 = 0
         y = 0

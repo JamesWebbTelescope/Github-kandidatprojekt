@@ -19,7 +19,7 @@ osc_control = Oscilloscope.Oscilloscope(Settings.voltages)
 camera_video = Video.Video("Run")
 
 if __name__ == "__main__": #Make sure that only the main thread is running.
-    interface.start()
+    interface.start(robot_control)
     arduino_control.start()
     robot_control.start()
     osc_control.start()

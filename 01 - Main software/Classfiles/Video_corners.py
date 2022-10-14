@@ -43,31 +43,33 @@ class Video(Thread):
         
         self.cap, square_flag = self.startVideo(self.text) #Take control of the camera.
         
+        ret, img = self.cap.read() #Take a picture with the camera.
+        cv.circle(img,(int(Settings.img_width/2),int(Settings.img_height/2)), 3, (255,0,0), -1) #Draw a circle in the middle of the image.
+        cv.waitKey(1)
+        print(img.shape)
+    
+        fromCenter = False
+        r = cv.selectROI("Select region of interest", img, fromCenter) #Prompt the user to indicate where the region of interest is in the image.
+        print("Here rectangle", r)
+        Settings.img_points = self.floodFill(img, r) #Perform the floodfill operation on the image and find the test points.
+        
         while True:
             Settings.camera_event.wait() #Wait for the start camera button to be pressed.
         
             self.B,self.G,self.R = (100, 100, 200)
             
-            ret, img = self.cap.read()
-            cv.circle(img,(int(Settings.img_width/2),int(Settings.img_height/2)), 3, (255,0,0), -1)
-            cv.waitKey(1)
-            print(img.shape)
-        
-            fromCenter = False
-            r = cv.selectROI("Select region of interest", img, fromCenter)
-            print("Here rectangle", r)
-            Settings.img_points = self.floodFill(img, r)
             #print(r)
             print(Settings.img_points)
             #cv.imshow("Original image", img)
             print(img.shape)
             #Settings.img_points.append([r[0],r[1],r[2],r[3]])
             #for i in range(len(img_points)):
-            rxp, ryp = Convert.Convert.findDistance(img_points[0][0], img_points[0][1])
-            Settings.rx_mm, Settings.ry_mm = Convert.Convert.convertPixeltoMM(rxp, ryp)
+            rxp, ryp = Convert.Convert.findDistance(img_points[0][0], img_points[0][1]) #Find the distance between the middle of the image and the list of sugggested test points.
+            Settings.rx_mm, Settings.ry_mm = Convert.Convert.convertPixeltoMM(rxp, ryp) #Convert the distance to mm
             print("Rectangles mm", Settings.rx_mm, Settings.ry_mm)
-            '''ret, img_show = self.cap.read()
-            cv.imshow("Live camera feed", img_show)'''
+            ret, img_show = self.cap.read()
+            cv.imshow("Live camera feed", img_show)
+            cv.waitKey(1)
             if Settings.terminateFlag == 1:
                 break
         self.close()
@@ -100,7 +102,7 @@ class Video(Thread):
     def startVideo(self, run):
         if run == "Run":
             try:
-               cap = cv.VideoCapture(0, cv.CAP_DSHOW)
+               cap = cv.VideoCapture(0, cv.CAP_DSHOW) #Set the camera up.
                cap.set(cv.CAP_PROP_AUTOFOCUS, Settings.autofocus)
                cap.set(cv.CAP_PROP_BRIGHTNESS, Settings.auto_brightness) 
                cap.set(cv.CAP_PROP_FRAME_WIDTH, Settings.img_width)
@@ -118,26 +120,26 @@ class Video(Thread):
     def floodFill(self, img, r):
         global img_points
         orig_img = img
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        image_cropped = gray[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY) #Convert to grayscale
+        image_cropped = gray[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])] #Crop the image
         print(image_cropped.shape)
-        _, threshold = cv.threshold(image_cropped, 200, 255, cv.THRESH_BINARY)
+        _, threshold = cv.threshold(image_cropped, 200, 255, cv.THRESH_BINARY) #Convert to binary
         
         cv.imwrite("Threshold floodfill.png", threshold)
         
         M,N = threshold.shape
         
-        n_objects = 0
+        n_objects = 0 #Apply thresholding ot the entire image
         for i in range(M):
             for j in range(N):
                 if threshold[i, j] == 255:
                     n_objects += 1
                     cv.floodFill(threshold, None, (j, i), n_objects)
         cv.imshow("Flood fill", threshold)
-        contours, _ = cv.findContours(threshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-        largest_contours = sorted(contours, key = cv.contourArea, reverse = True)[0:5]
+        contours, _ = cv.findContours(threshold, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE) #Detect contours in the resulting image
+        largest_contours = sorted(contours, key = cv.contourArea, reverse = True)[0:5] #Sort the contours by their area and only keep the five biggest
         img_points = []
-        for c in range(len(largest_contours)):
+        for c in range(len(largest_contours)): 
             #print("Drawing boxes")
             rect = cv.minAreaRect(largest_contours[c])
             box = cv.boxPoints(rect)
@@ -158,7 +160,7 @@ class Video(Thread):
         cv.imwrite("Rectangles floodfill.png", img_rect)
         return img_points
             
-    def detectBoxes(self, im):
+    def detectBoxes(self, im): #Deprecated
         global box_x, box_y, box_w, box_h
         im = cv.resize(im, (0, 0), fx=0.8, fy=0.8)
         im = cv.bilateralFilter(im,7,20,20) #Smoothing filter to remove noiseq

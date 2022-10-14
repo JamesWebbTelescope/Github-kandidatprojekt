@@ -98,7 +98,7 @@ class Video(Thread):
                 print("Couldn't access camera")
         elif run == "Test":
             #cap = cv.VideoCapture("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/04 - Tests/Test video 5 IGBT.mp4")
-            cap = cv.imread("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/02 - Code/Robot control sandbox/sandbox_v.1.5/Viktor From/Original image.PNG")
+            cap = cv.resize(cv.imread("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/Github-kandidatprojekt/Test image with circle.png"), (640, 480))
         square_flag = 0
         return cap, square_flag
     

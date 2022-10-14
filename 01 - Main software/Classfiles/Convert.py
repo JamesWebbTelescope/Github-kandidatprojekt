@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 14 08:10:03 2022
 
-@author: Near-field scanner
+@author: Viktor From
 """
 
 import Classfiles.Settings as Settings

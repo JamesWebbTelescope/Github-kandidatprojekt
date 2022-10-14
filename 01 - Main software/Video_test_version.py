@@ -24,7 +24,7 @@ class Video(Thread):
         self.sensor_height = 3.4565
         self.focal_length = 3.916
         self.cap = 0
-        self.cap, square_flag = self.startVideo("Run")
+        self.cap, square_flag = self.startVideo("Test")
         return None
     def run(self):
         global box_x
@@ -39,6 +39,7 @@ class Video(Thread):
             self.B,self.G,self.R = (100, 100, 200)
             
             ret, img = self.cap.read()
+            img = self.cap
             cv.waitKey(1)
             print(img.shape)
         
@@ -97,7 +98,7 @@ class Video(Thread):
                 print("Couldn't access camera")
         elif run == "Test":
             #cap = cv.VideoCapture("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/04 - Tests/Test video 5 IGBT.mp4")
-            cap = cv.imread("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/02 - Code/Robot control sandbox/sandbox_v.1.5/Viktor From/Original image.PNG")
+            cap = cv.resize(cv.imread("C:/Users/Viktor From/OneDrive/Kandidat/Kandidatprojekt/Github-kandidatprojekt/Test image with circle.png"), (640, 480))
         square_flag = 0
         return cap, square_flag
     
@@ -109,7 +110,7 @@ class Video(Thread):
         print(image_cropped.shape)
         _, threshold = cv.threshold(image_cropped, 200, 255, cv.THRESH_BINARY)
         
-        cv.imwrite("Threshold floodfill.png", threshold)
+        cv.imwrite("Threshold floodfill test.png", threshold)
         
         M,N = threshold.shape
         
