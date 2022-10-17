@@ -10,13 +10,14 @@ from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 import Classfiles.Settings as Settings
 
 class Interface(Thread):
-    def __init__(self):
+    def __init__(self, robot_control_thread):
         Thread.__init__(self)
+        self.robot_thread = robot_control_thread
     
-    def run(self, robot_control_thread):
-        self.window(robot_control_thread)
+    def run(self):
+        self.window()
     
-    def window(self, robot_control_thread):
+    def window(self):
         app = QApplication(sys.argv)
         widget = QWidget()
        
@@ -45,12 +46,17 @@ class Interface(Thread):
         button5.move(64,160)
         button5.clicked.connect(self.button5_clicked)
         
-        button5 = QPushButton(widget)
-        button5.setText("Close connection to robot")
-        button5.move(64,200)
-        button5.clicked.connect(self.button6_clicked, robot_control_thread)
+        button6 = QPushButton(widget)
+        button6.setText("Close connection to robot")
+        button6.move(64,200)
+        button6.clicked.connect(self.button6_clicked)
+        
+        button7 = QPushButton(widget)
+        button7.setText("Open connection to robot")
+        button7.move(64,240)
+        button7.clicked.connect(self.button7_clicked)
 
-        widget.setGeometry(50,50,320,250)
+        widget.setGeometry(50,50,320,300)
         widget.setWindowTitle("ESD Test control")
         widget.show()
         sys.exit(app.exec_())
@@ -86,7 +92,11 @@ class Interface(Thread):
         Settings.camera_event.clear()
         print("Program terminated") 
     
-    def button6_clicked(self, robot_control_thread):
-        robot_control_thread.close(robot_control_thread)
+    def button6_clicked(self):
+        self.robot_thread.close()
         print("Connection to robot closed") 
+    
+    def button7_clicked(self):
+        self.robot_thread.open_connection()
+        print("Connection to robot opened") 
         

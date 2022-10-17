@@ -12,14 +12,14 @@ import Classfiles.Oscilloscope as Oscilloscope
 import Classfiles.Video_corners as Video
 import Classfiles.Settings as Settings
 
-interface = Interface.Interface()
 arduino_control = Arduino.Arduino(Settings.cleandata, Settings.text, Settings.voltages, Settings.button_state)
 robot_control = Robot_TCP_comm.Robot_TCP_comm()
 osc_control = Oscilloscope.Oscilloscope(Settings.voltages)
-camera_video = Video.Video("Run")
+camera_video = Video.Video("Test")
+interface = Interface.Interface(robot_control)
 
 if __name__ == "__main__": #Make sure that only the main thread is running.
-    interface.start(robot_control)
+    interface.start()
     arduino_control.start()
     robot_control.start()
     osc_control.start()

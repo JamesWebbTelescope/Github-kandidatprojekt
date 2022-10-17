@@ -41,9 +41,12 @@ class Video(Thread):
         global takePicFlag
         global img_points
         
-        self.cap, square_flag = self.startVideo(self.text) #Take control of the camera.
+        if self.text == "Run":
+            cap, square_flag = self.startVideo(self.text) #Take control of the camera.
+            ret, img = self.cap.read() #Take a picture with the camera.
+        elif self.text == "Test":
+            img, square_flag = self.startVideo(self.text)
         
-        ret, img = self.cap.read() #Take a picture with the camera.
         cv.circle(img,(int(Settings.img_width/2),int(Settings.img_height/2)), 3, (255,0,0), -1) #Draw a circle in the middle of the image.
         cv.waitKey(1)
         print(img.shape)
