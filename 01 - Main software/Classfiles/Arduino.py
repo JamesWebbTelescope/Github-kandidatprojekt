@@ -22,31 +22,52 @@ class Arduino(Thread):
     
     def run(self):
         while True:
-            self.data = self.readLines() #Receive data from the Teensy.
-            self.cleandata = self.data.decode() #Decode the data from the Teensy.
-            split = self.cleandata.split() #Split the data into separate parts, so they can be assigned to separate variables.
-            if len(split) > 1: #Check that the message isn't empty.
-                Settings.FSR_voltage = float(split[0].replace(',', '')) #Get the voltage of the force-sensitive resistor and make sure that it doesn't contain any commas.
-                Settings.distance_measured = int(float(split[1].replace(',', ''))) #Get the distance to the DUT and make sure there are no commas.
+            self.data = self.readLines()
+         #   print(self.data)
+            #cleandata = arduino_control.cleanData(data)
+            self.cleandata = self.data.decode()
+            split = self.cleandata.split()
+            print("Received from Arduino")
+            print(split)
+            if len(split) > 1:
+                #Settings.FSR_voltage = float(split[0].replace(',', ''))
+                Settings.FSR_voltage = 0.0
+                #print("Distance\n")
+                Settings.distance_measured = int(float(split[1].replace(',', '')))
+                #print(Settings.distance_measured)
+                #print(type(distance))
+            elif len(split) == 1:
+                Settings.FSR_voltage = float(split[0].replace(',', ''))
+                print(Settings.FSR_voltage)
+                print(type(Settings.FSR_voltage))
             else:
-                Settings.FSR_voltage = 0.0 #In case the connection to the Teensy is lost. 
+                Settings.FSR_voltage = 0.0
                 Settings.distance_measured = 1000
-            self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state) #If everything is received correctly, store it all so it cna be printed later.
+            #if len(split) <= 1:
+            self.text = self.cleandata.strip() + "\n" + "Voltage: " + '\n' + str(self.voltages) + '\n' + "Button: " + str(self.button_state)
             
+          #  print(self.text)
             Settings.text = self.text
-            if Settings.terminateFlag == 1: #If the main program calls for a termination, stop the communication.
+            if Settings.terminateFlag == 1:
                 break
         self.close()
         
     def connectToArduino(self):
         try:
-            self.comm = serial.Serial('COM3', 115200, timeout=.1) #Open the port to the Teensy.
+            self.comm = serial.Serial('COM3', 115200, timeout=.1)
         except:
-            print("Couldn't connect to Arduino") #In case no port can be opened, print out "Couldn't connect to Arduino"
+            print("Couldn't connect to Arduino")
     
     def readLines(self):
-        data = self.comm.readline()[:-2] #Receive data from the Teensy, ignore the last two characters.
+        data = self.comm.readline()[:-2]
         return data
     
+    def cleanData(self, data):
+        newl = []
+        for i in range(len(data)):
+            temp = data[i][2:]
+            newl.append(temp)
+        return newl
+    
     def close(self):
-        self.comm.close() #Close the port
+        self.comm.close()
