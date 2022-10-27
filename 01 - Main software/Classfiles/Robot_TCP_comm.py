@@ -15,10 +15,6 @@ import Classfiles.Settings as Settings
 class Robot_TCP_comm(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.recv.settimeout(2)
-        self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.send.settimeout(2)
         self.open_connection()
         
     def run(self):
@@ -52,6 +48,10 @@ class Robot_TCP_comm(Thread):
         # Create a TCP/IP socket
 
         # Connect the socket to the port where the server is listening
+            self.recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.recv.settimeout(2)
+            self.send = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.send.settimeout(2)
             receive_address = ("192.168.11.2", 23) #Set the address of the robot's receiver port on port 23.
             send_address = ("192.168.11.2", 49152) #Set the address of the robot's send port on port 49152.
             print('connecting to %s port %s' % receive_address) #Print the address for the receive port
@@ -173,6 +173,13 @@ class Robot_TCP_comm(Thread):
                 time.sleep(1)
                 break
             if (Settings.distance_measured < 20): #If the robot is too close to anything.
+                self.recv.sendall(b"zShift = 0\n") #Stop the robot
+                #print("Robot stopped")
+                time.sleep(1)
+                self.recv.sendall(b"takepic = 1\n") #Go to starting position.
+                time.sleep(1)
+                break
+            if (Settings.FSR_voltage > 2.0):
                 self.recv.sendall(b"zShift = 0\n") #Stop the robot
                 #print("Robot stopped")
                 time.sleep(1)
